@@ -19,6 +19,10 @@ import bcrypt
 import jwt
 import qrcode
 import razorpay
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
@@ -579,6 +583,178 @@ async def mark_shipped(order_id: str, _: dict = Depends(require_admin)):
         update["shipped_at"] = None
     await db.orders.update_one({"id": order_id}, {"$set": update})
     return {"ok": True, "status": new_status}
+
+
+# ---------------- Address labels PDF ----------------
+def _wrap_text(text: str, max_chars: int) -> list[str]:
+    """Simple word-wrap that respects newlines."""
+    lines: list[str] = []
+    for para in (text or "").splitlines():
+        para = para.strip()
+        if not para:
+            lines.append("")
+            continue
+        words = para.split()
+        cur = ""
+        for w in words:
+            candidate = f"{cur} {w}".strip()
+            if len(candidate) <= max_chars:
+                cur = candidate
+            else:
+                if cur:
+                    lines.append(cur)
+                # single word longer than line — hard-split
+                while len(w) > max_chars:
+                    lines.append(w[:max_chars])
+                    w = w[max_chars:]
+                cur = w
+        if cur:
+            lines.append(cur)
+    return lines
+
+
+def _draw_label(c, x, y, w, h, order, base_url):
+    """Draw one shipping label at (x, y) with size (w, h). Origin is bottom-left."""
+    # Frame
+    c.setLineWidth(0.6)
+    c.setDash(2, 2)
+    c.setStrokeColorRGB(0.6, 0.6, 0.6)
+    c.rect(x, y, w, h)
+    c.setDash()
+
+    pad = 4 * mm
+    inner_x = x + pad
+    inner_w = w - 2 * pad
+    top = y + h - pad
+
+    # Sender / brand strip
+    c.setFillColorRGB(1.0, 0.867, 0.055)  # neon yellow
+    c.rect(x, y + h - 8 * mm, w, 8 * mm, fill=1, stroke=0)
+    c.setFillColorRGB(0.1, 0.1, 0.1)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(inner_x, y + h - 5.5 * mm, "NECIRCLE · CONNECTING THE NORTHEAST")
+    c.setFont("Helvetica", 6.5)
+    c.drawRightString(
+        x + w - pad,
+        y + h - 5.5 * mm,
+        f"Order #{(order.get('id') or '')[:8]}",
+    )
+
+    # "SHIP TO" label
+    cur_y = y + h - 8 * mm - 5 * mm
+    c.setFillColorRGB(0.36, 0.34, 0.31)
+    c.setFont("Helvetica-Bold", 6.5)
+    c.drawString(inner_x, cur_y, "SHIP TO")
+
+    # Name
+    cur_y -= 5.5 * mm
+    c.setFillColorRGB(0.1, 0.1, 0.1)
+    c.setFont("Helvetica-Bold", 12)
+    name = order.get("customer_name") or "—"
+    c.drawString(inner_x, cur_y, name[:40])
+
+    # Address (wrapped)
+    cur_y -= 4.5 * mm
+    c.setFont("Helvetica", 9)
+    address_lines = _wrap_text(order.get("address") or "", max_chars=40)[:4]
+    for line in address_lines:
+        c.drawString(inner_x, cur_y, line)
+        cur_y -= 3.8 * mm
+
+    # Phone
+    cur_y -= 1 * mm
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(inner_x, cur_y, f"Phone: +91 {order.get('customer_phone', '')}")
+
+    # QR (bottom-right) linking to first tag
+    tag_ids = order.get("tag_ids") or []
+    if tag_ids:
+        qr = qrcode.QRCode(
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=6,
+            border=1,
+        )
+        qr.add_data(f"{base_url}/p/{tag_ids[0]}")
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="#1a1a1a", back_color="#ffffff").convert("RGB")
+        import io as _io
+
+        buf = _io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        qr_size = 18 * mm
+        from reportlab.lib.utils import ImageReader
+
+        c.drawImage(
+            ImageReader(buf),
+            x + w - pad - qr_size,
+            y + pad,
+            width=qr_size,
+            height=qr_size,
+            mask="auto",
+        )
+
+    # Tag IDs strip (bottom-left)
+    c.setFont("Helvetica-Bold", 6.5)
+    c.setFillColorRGB(0.36, 0.34, 0.31)
+    c.drawString(inner_x, y + pad + 12 * mm, "STICKERS IN THIS PACK")
+    c.setFillColorRGB(0.1, 0.1, 0.1)
+    c.setFont("Courier-Bold", 10)
+    tag_line = " · ".join(f"#{t}" for t in tag_ids) or "— none —"
+    c.drawString(inner_x, y + pad + 7 * mm, tag_line[:36])
+    c.setFont("Helvetica", 7)
+    c.setFillColorRGB(0.36, 0.34, 0.31)
+    c.drawString(inner_x, y + pad + 3 * mm, "3 language stickers · Rs. 99 paid")
+
+
+@api.get("/admin/orders/labels-pdf")
+async def orders_labels_pdf(
+    request: Request,
+    _: dict = Depends(require_admin),
+):
+    orders = (
+        await db.orders.find(
+            {"status": "paid"},
+            {"_id": 0, "razorpay_signature": 0, "razorpay_payment_id": 0},
+        )
+        .sort("paid_at", 1)
+        .to_list(length=500)
+    )
+    if not orders:
+        raise HTTPException(status_code=404, detail="No paid orders to ship")
+
+    base_url = _public_base_url(request)
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    page_w, page_h = A4
+
+    # 2 columns × 5 rows = 10 labels per A4 page. Each label ≈ 99×57 mm.
+    cols, rows = 2, 5
+    margin_x = 6 * mm
+    margin_y = 12 * mm
+    label_w = (page_w - 2 * margin_x) / cols
+    label_h = (page_h - 2 * margin_y) / rows
+
+    idx = 0
+    for o in orders:
+        col = idx % cols
+        row = (idx // cols) % rows
+        x = margin_x + col * label_w
+        # y from bottom
+        y = page_h - margin_y - (row + 1) * label_h
+        _draw_label(c, x, y, label_w, label_h, o, base_url)
+        idx += 1
+        if idx % (cols * rows) == 0 and idx < len(orders):
+            c.showPage()
+
+    c.save()
+    buf.seek(0)
+    filename = f"necircle-labels-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}.pdf"
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ------------------------------------------------------------

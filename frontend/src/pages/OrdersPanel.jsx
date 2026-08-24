@@ -9,9 +9,10 @@ import {
   Truck,
   Loader2,
   RotateCcw,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api, formatApiError } from "../lib/api";
+import { api, BACKEND_URL, formatApiError } from "../lib/api";
 
 function last10(phone) {
   return (phone || "").replace(/\D/g, "").slice(-10);
@@ -184,6 +185,7 @@ export default function OrdersPanel({ onChanged }) {
   const [orders, setOrders] = useState(null);
   const [filter, setFilter] = useState("to_ship");
   const [loading, setLoading] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -214,12 +216,45 @@ export default function OrdersPanel({ onChanged }) {
     }
   };
 
+  const printLabels = async () => {
+    setPrinting(true);
+    try {
+      const token = localStorage.getItem("necircle_token");
+      const res = await fetch(`${BACKEND_URL}/api/admin/orders/labels-pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(formatApiError(j.detail, "No pending orders to print"));
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "necircle-labels.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Also open in new tab for direct printing
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      toast.success("Labels PDF ready");
+    } catch (err) {
+      toast.error(err.message || "Download failed");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const list = (orders || []).filter((o) => {
     if (filter === "all") return o.status === "paid" || o.status === "shipped";
     if (filter === "to_ship") return o.status === "paid";
     if (filter === "shipped") return o.status === "shipped";
     return false;
   });
+
+  const toShipCount = (orders || []).filter((o) => o.status === "paid").length;
 
   return (
     <section className="mt-12" data-testid="orders-panel">
@@ -230,25 +265,49 @@ export default function OrdersPanel({ onChanged }) {
             Paid orders ({list.length})
           </h2>
         </div>
-        <div className="inline-flex rounded-full border-[2.5px] border-white bg-royal-soft/40 p-1">
-          {[
-            { k: "to_ship", label: "To ship" },
-            { k: "shipped", label: "Shipped" },
-            { k: "all", label: "All paid" },
-          ].map((opt) => (
-            <button
-              key={opt.k}
-              onClick={() => setFilter(opt.k)}
-              data-testid={`orders-filter-${opt.k}`}
-              className={`px-3.5 py-1.5 text-sm rounded-full font-black transition-colors ${
-                filter === opt.k
-                  ? "bg-neon text-[#1a1a1a]"
-                  : "text-white/80 hover:text-white"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={printLabels}
+            disabled={printing || toShipCount === 0}
+            data-testid="print-labels-button"
+            className="btn-neon rounded-full px-4 py-1.5 font-display font-black text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              toShipCount === 0
+                ? "No pending orders to print"
+                : `Print ${toShipCount} shipping label${toShipCount > 1 ? "s" : ""}`
+            }
+          >
+            {printing ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Preparing…
+              </>
+            ) : (
+              <>
+                <Printer className="w-3.5 h-3.5" strokeWidth={2.6} />
+                Print labels {toShipCount > 0 ? `(${toShipCount})` : ""}
+              </>
+            )}
+          </button>
+          <div className="inline-flex rounded-full border-[2.5px] border-white bg-royal-soft/40 p-1">
+            {[
+              { k: "to_ship", label: "To ship" },
+              { k: "shipped", label: "Shipped" },
+              { k: "all", label: "All paid" },
+            ].map((opt) => (
+              <button
+                key={opt.k}
+                onClick={() => setFilter(opt.k)}
+                data-testid={`orders-filter-${opt.k}`}
+                className={`px-3.5 py-1.5 text-sm rounded-full font-black transition-colors ${
+                  filter === opt.k
+                    ? "bg-neon text-[#1a1a1a]"
+                    : "text-white/80 hover:text-white"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
