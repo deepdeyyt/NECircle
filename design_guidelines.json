@@ -1,0 +1,81 @@
+{
+  "theme": "light",
+  "typography": {
+    "headings": "Cabinet Grotesk",
+    "body": "Manrope",
+    "bilingual": "Noto Sans Bengali",
+    "instructions": "Use tracking-tight for large headings (H1/H2). Body text must be highly legible. Do NOT use Inter, Roboto, or standard defaults for headings. Use text-[#2A2521] for primary text."
+  },
+  "colors": {
+    "background": "#FBF7F1",
+    "primary": "#B5502F",
+    "primary_hover": "#984024",
+    "secondary": "#0F6E56",
+    "secondary_hover": "#0A4E3D",
+    "text_dark": "#2A2521",
+    "text_muted": "#5C564F",
+    "surface": "#FFFFFF",
+    "border": "rgba(42, 37, 33, 0.12)"
+  },
+  "visual enhancers": {
+    "shadows": "Minimal to none. Use thin 1px borders (border-black/10) to define edges instead of heavy drop shadows. Focus rings should be solid and match brand colors.",
+    "border_radius": "Soft rounded corners: 12px or 16px for cards (rounded-xl/rounded-2xl), 9999px for primary action buttons (rounded-full).",
+    "textures": "Subtle paper-like warmth achieved through the #FBF7F1 background. Keep the UI 'Clay & Crisp'."
+  },
+  "component name": {
+    "buttons": "Pill-shaped (rounded-full) for primary actions. Large touch targets (min-h-[56px]) for mobile public pages. Distinct color blocking: Terracotta for Call, Teal for WhatsApp.",
+    "cards": "White background (#FFFFFF), thin border, no shadow. Internal padding must be generous (p-6 or p-8).",
+    "inputs": "14px rounded (rounded-xl), 1px border. Focus state must use ring-2 ring-[#B5502F] (Terracotta) and border-transparent.",
+    "badges": "Small pill-shaped tags for vehicle/business type with soft background colors (e.g., bg-[#0F6E56]/10 text-[#0F6E56])."
+  },
+  "grids": {
+    "admin_dashboard": "Bento Grid protocol. Wide gaps (gap-6 or gap-8). Use a 3-column layout for top stat cards, and a robust data table/grid for the tag inventory.",
+    "rules": "Never fill 100% of the grid perfectly if not needed. Allow breathing room. Grid items MUST be direct children."
+  },
+  "layouts": {
+    "public_pages": "Mobile-first single column. Centered max-w-md container on desktop to simulate mobile view. Generous vertical spacing.",
+    "claim_form": "Stacked form fields, left-aligned labels. Bilingual helper text directly under labels.",
+    "contact_page": "Dark header block for the tag type label, followed by a large claimed name. Big, easily tappable contact buttons."
+  },
+  "motion": {
+    "rules": "Micro-interactions only. Hover states on buttons (translate-y-[-2px] with subtle shadow). Entrance staggered fade-in for admin grid items. No aggressive animations.",
+    "transitions": "Target specific properties (e.g., transition-colors, transition-transform) rather than transition-all."
+  },
+  "accessibility": {
+    "contrast": "Ensure text over brand colors meets WCAG AA standards. Use white text on Terracotta and Teal buttons.",
+    "focus": "All inputs and buttons must have clear focus-visible rings.",
+    "test_ids": "CRITICAL: All interactive and key informational elements MUST include a 'data-testid' attribute in kebab-case (e.g., 'data-testid=\"claim-submit-button\"')."
+  },
+  "media": {
+    "icons": "Use 'lucide-react' for clean, modern standard icons (Phone, MessageCircle, Shield, Printer, Download).",
+    "image urls": [
+      {
+        "category": "background",
+        "url": "https://images.pexels.com/photos/4101053/pexels-photo-4101053.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Peaceful sunrise view in Northeast India. Use as an optional subtle background or side-panel image for the Admin Login desktop page with a white/50 backdrop-blur overlay."
+      }
+    ]
+  },
+  "3d libraries": {
+    "usage": "Not required. Focus on fast, lightweight 2D performance for mobile web."
+  },
+  "instructions_to_main_agent": [
+    "Build the application using standard React (.js) and Tailwind CSS.",
+    "Apply the Light theme exclusively, adhering to the #FBF7F1 background and #2A2521 text.",
+    "Ensure public pages (/p/:tag_id) are heavily optimized for mobile viewing, with a max-width container on desktop.",
+    "Admin dashboard must contain 3 stat cards, a batch QR generation input/button, a tag inventory grid, and a ZIP download button.",
+    "Public claim form MUST have bilingual text (English + Bengali) for key instructions and labels.",
+    "The Contact page must visually distinguish 'Call' (Terracotta color) and 'WhatsApp' (Teal color) buttons.",
+    "Create Shadcn-style components manually using pure Tailwind and HTML elements since this is a custom creative layout.",
+    "Remember to add 'data-testid' to every interactive element for testing purposes."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Do not use complete transparent background in header, overlays, or any surface that has content under it.",
+    "You MUST NOT apply universal transition (e.g., transition: all).",
+    "You MUST NOT center align the app container (do not add .App { text-align: center; } in the css file).",
+    "Always explicitly set text color on hover (e.g., hover:bg-slate-900 hover:text-white).",
+    "Never use AI assistant Emoji characters (like 🤖, 💡) for icons.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Always use modern button styles with proper touch targets and interaction animations."
+  ]
+}

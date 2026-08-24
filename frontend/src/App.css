@@ -1,0 +1,43 @@
+/* NECircle - global helpers */
+
+.btn-clay {
+  background-color: #b5502f;
+  color: #ffffff;
+  transition: background-color 200ms ease, transform 200ms ease;
+}
+.btn-clay:hover {
+  background-color: #984024;
+  transform: translateY(-1px);
+}
+.btn-clay:active {
+  transform: translateY(0);
+}
+
+.btn-teal {
+  background-color: #0f6e56;
+  color: #ffffff;
+  transition: background-color 200ms ease, transform 200ms ease;
+}
+.btn-teal:hover {
+  background-color: #0a4e3d;
+  transform: translateY(-1px);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.hover-lift {
+  transition: transform 200ms ease, border-color 200ms ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  border-color: rgba(181, 80, 47, 0.4);
+}

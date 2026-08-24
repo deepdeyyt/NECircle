@@ -1,0 +1,72 @@
+@import url("https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@500;700;800;900&family=Manrope:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 36 38% 96%;
+    --foreground: 25 12% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 25 12% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 25 12% 15%;
+    --primary: 15 60% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 165 76% 25%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 36 22% 92%;
+    --muted-foreground: 25 8% 38%;
+    --accent: 36 22% 92%;
+    --accent-foreground: 25 12% 15%;
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 25 10% 88%;
+    --input: 25 10% 85%;
+    --ring: 15 60% 45%;
+    --radius: 0.75rem;
+  }
+}
+
+html,
+body,
+#root {
+  background-color: #fbf7f1;
+  color: #2a2521;
+}
+
+body {
+  margin: 0;
+  font-family: "Manrope", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+.font-display {
+  font-family: "Cabinet Grotesk", "Manrope", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-bn {
+  font-family: "Noto Sans Bengali", "Manrope", system-ui, sans-serif;
+}
+
+/* Subtle paper texture */
+.paper-grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(42, 37, 33, 0.035) 1px, transparent 1px);
+  background-size: 3px 3px;
+  z-index: 0;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+}

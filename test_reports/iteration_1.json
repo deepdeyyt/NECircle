@@ -1,0 +1,41 @@
+{
+  "summary": "First-finish smoke test of NECircle. Backend endpoints validated via curl (auth, admin stats, batch, tag get/claim, phone validation, ZIP export). Frontend validated via Playwright covering landing, admin protection, login (invalid+valid), admin dashboard testids/filters/inventory links, public claim form (Bengali microcopy, shadcn Select business/vehicle toggle showing note-input, name/phone error testids, error clearing on typing), successful claim rendering contact-page same URL with correct tel:/wa.me hrefs, 404 tag-not-found, and logout clearing session.",
+  "tested_scope": ["frontend", "backend", "auth", "integration"],
+  "passed": [
+    "GET /api/ -> 200 {service:NECircle, ok:true}",
+    "POST /api/auth/login wrong password -> 401; correct -> 200 with token/email/role=admin",
+    "GET /api/auth/me no token -> 401; with Bearer -> 200",
+    "POST /api/admin/tags/batch (count=2) -> {created:2, from:'00009', to:'00010'} (sequential continuation from highest id)",
+    "GET /api/admin/stats -> {printed, activated, unassigned} correct and update after batch",
+    "GET /api/admin/tags -> sorted list of tags (00001,00002,...)",
+    "GET /api/tags/00099999 -> 404 'Tag not found'; GET /api/tags/00001 -> tag payload",
+    "POST /api/tags/{id}/claim invalid phone '12345' and '5555555555' -> 422 'Enter a valid Indian phone number'",
+    "POST /api/tags/{id}/claim empty name -> 422 string_too_short",
+    "POST /api/tags/00003/claim valid vehicle with '+91 98765 43210' -> phone normalized to '9876543210', note nulled",
+    "POST /api/tags/00004/claim business with note -> note stored",
+    "POST /api/tags/00001/claim already active -> 409 'Tag already activated'",
+    "GET /api/admin/tags/qr-zip?scope=unassigned no auth -> 401; with auth -> 200 application/zip, filename 'necircle-qr-unassigned-*.zip', valid zip containing NECircle-{id}.png files",
+    "Frontend landing shows NECircle brand + Operator sign in + Open operator dashboard links",
+    "/admin unauthenticated redirects to /login",
+    "/login invalid creds shows [data-testid=login-error]; valid creds navigate to /admin",
+    "Admin dashboard exposes testids: stat-printed, stat-activated, stat-unassigned, batch-count-input, generate-batch-button, download-zip-button, filter-all/unassigned/active, logout-button",
+    "Inventory filter counts consistent (all >= unassigned/active); tag cards link to /p/{id}",
+    "/p/00099999 renders [data-testid=tag-not-found]",
+    "/p/{unassigned_id} renders Bengali microcopy 'এই ট্যাগটি এখনো চালু করা হয়নি।' with claim form",
+    "Type select toggling Business shows [data-testid=note-input]; Vehicle hides it",
+    "Empty submit shows name-error and phone-error; invalid phone '12345' shows phone-error; retyping valid phone clears it",
+    "Successful claim (name='Test User', phone='9876543210', vehicle) re-renders same URL as [data-testid=contact-page] without navigation; call-button href='tel:+919876543210'; whatsapp-button href='https://wa.me/919876543210' target='_blank'",
+    "Logout clears session; revisiting /admin redirects to /login"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": [
+    "Type-of-tag uses a shadcn Select (button[role=combobox]), not radio labels — tests updated accordingly.",
+    "Phone normalization confirmed: '+91 98765 43210' -> '9876543210' stored; contact hrefs use +91 prefix.",
+    "ZIP endpoint returned 6 PNGs for unassigned tags with correct NECircle-{id}.png naming.",
+    "DB was not pre-empty (previous seed data present) so batch sequential ids were verified as continuation from highest id rather than starting at 00001."
+  ]
+}
