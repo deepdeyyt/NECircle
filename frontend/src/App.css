@@ -1,5 +1,55 @@
 /* NECircle - global helpers */
 
+/* Primary yellow button with thick black stroke (brand look) */
+.btn-neon {
+  background-color: #fddd0e;
+  color: #1a1a1a;
+  border: 3px solid #1a1a1a;
+  transition: transform 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  box-shadow: 4px 4px 0 0 #1a1a1a;
+}
+.btn-neon:hover {
+  background-color: #ffe83e;
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 0 #1a1a1a;
+}
+.btn-neon:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 0 #1a1a1a;
+}
+.btn-neon:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Ghost / outline on royal bg */
+.btn-outline-w {
+  background-color: transparent;
+  color: #ffffff;
+  border: 3px solid #ffffff;
+  transition: transform 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+.btn-outline-w:hover {
+  background-color: #ffffff;
+  color: #1a1a1a;
+  transform: translateY(-1px);
+}
+
+/* Dark button (used inside light cards) */
+.btn-royal {
+  background-color: #44268f;
+  color: #ffffff;
+  border: 3px solid #1a1a1a;
+  transition: background-color 150ms ease, transform 150ms ease;
+  box-shadow: 4px 4px 0 0 #1a1a1a;
+}
+.btn-royal:hover {
+  background-color: #331b6e;
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 0 #1a1a1a;
+}
+
+/* Legacy clay (kept for the Vehicle contact page) */
 .btn-clay {
   background-color: #b5502f;
   color: #ffffff;
@@ -9,10 +59,6 @@
   background-color: #984024;
   transform: translateY(-1px);
 }
-.btn-clay:active {
-  transform: translateY(0);
-}
-
 .btn-teal {
   background-color: #0f6e56;
   color: #ffffff;
@@ -23,6 +69,7 @@
   transform: translateY(-1px);
 }
 
+/* Chip pill */
 .chip {
   display: inline-flex;
   align-items: center;
@@ -30,14 +77,23 @@
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 
+/* Card lift */
 .hover-lift {
   transition: transform 200ms ease, border-color 200ms ease;
 }
 .hover-lift:hover {
   transform: translateY(-2px);
-  border-color: rgba(181, 80, 47, 0.4);
+}
+
+/* Brutal card: white surface with thick black border + offset shadow */
+.brutal-card {
+  background-color: #ffffff;
+  color: #1a1a1a;
+  border: 3px solid #1a1a1a;
+  border-radius: 18px;
+  box-shadow: 5px 5px 0 0 #1a1a1a;
 }

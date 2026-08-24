@@ -6,6 +6,15 @@ module.exports = {
     extend: {
       colors: {
         paper: "#FBF7F1",
+        royal: {
+          DEFAULT: "#44268F",
+          dark: "#331B6E",
+          soft: "#5E3EAF",
+        },
+        neon: {
+          DEFAULT: "#FDDD0E",
+          dark: "#EBCB00",
+        },
         clay: {
           DEFAULT: "#B5502F",
           dark: "#984024",

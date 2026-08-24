@@ -42,7 +42,7 @@ function stripPlate(v) {
 
 function PublicFooter({ tagId }) {
   return (
-    <footer className="mt-12 pt-8 border-t border-black/10 text-center text-xs text-ink-muted">
+    <footer className="mt-12 pt-8 border-t border-white/15 text-center text-xs text-white/60">
       <div className="font-body">
         NECircle · Connecting the Northeast · tag #{tagId}
       </div>
@@ -348,30 +348,30 @@ function BusinessClaimedView({ tag }) {
   const phone10 = last10(profile.phone);
   return (
     <div
-      className="min-h-screen bg-paper flex flex-col animate-fade-up"
+      className="min-h-screen bg-royal text-white flex flex-col animate-fade-up"
       data-testid="contact-page"
       data-tag-type="business"
     >
       <div className="max-w-md w-full mx-auto px-5 pt-6 pb-10 flex-1">
         <div className="flex items-center justify-between">
           <BrandMark />
-          <span className="text-xs text-ink-muted font-mono">#{id}</span>
+          <span className="text-xs font-mono text-white/70">#{id}</span>
         </div>
 
-        <div className="mt-8 rounded-2xl bg-ink text-white px-6 py-8">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-white/70">
-            <span className="w-1.5 h-1.5 rounded-full bg-clay" />
+        <div className="mt-8 rounded-2xl bg-neon text-[#1a1a1a] border-[3px] border-[#1a1a1a] shadow-[6px_6px_0_0_#1a1a1a] px-6 py-8">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-black">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#1a1a1a]" />
             Business profile
           </div>
-          <div className="mt-1 text-[11px] text-white/50 font-bn">ব্যবসার প্রোফাইল</div>
+          <div className="mt-1 text-[11px] font-bn text-[#1a1a1a]/70">ব্যবসার প্রোফাইল</div>
           <h1
-            className="mt-4 font-display text-4xl sm:text-5xl font-extrabold leading-tight break-words"
+            className="mt-4 font-display text-4xl sm:text-5xl font-black leading-tight break-words"
             data-testid="contact-name"
           >
             {profile.name}
           </h1>
           {profile.note && (
-            <p className="mt-3 text-white/80 text-sm leading-relaxed" data-testid="contact-note">
+            <p className="mt-3 text-[#1a1a1a]/80 text-sm leading-relaxed font-medium" data-testid="contact-note">
               {profile.note}
             </p>
           )}
@@ -381,7 +381,7 @@ function BusinessClaimedView({ tag }) {
           <a
             href={`tel:+91${phone10}`}
             data-testid="call-button"
-            className="btn-clay flex items-center justify-center gap-3 rounded-full px-6 min-h-[60px] font-display text-lg font-bold shadow-sm"
+            className="btn-neon flex items-center justify-center gap-3 rounded-full px-6 min-h-[60px] font-display text-lg font-black"
           >
             <Phone className="w-5 h-5" strokeWidth={2.5} />
             Call {profile.name.split(" ")[0]}
@@ -391,7 +391,7 @@ function BusinessClaimedView({ tag }) {
             target="_blank"
             rel="noopener noreferrer"
             data-testid="whatsapp-button"
-            className="btn-teal flex items-center justify-center gap-3 rounded-full px-6 min-h-[60px] font-display text-lg font-bold shadow-sm"
+            className="flex items-center justify-center gap-3 rounded-full px-6 min-h-[60px] font-display text-lg font-black bg-[#0F6E56] text-white border-[3px] border-[#1a1a1a] shadow-[4px_4px_0_0_#1a1a1a] hover:bg-[#0A4E3D] transition-colors"
           >
             <MessageCircle className="w-5 h-5" strokeWidth={2.5} />
             Message on WhatsApp
@@ -472,14 +472,14 @@ function ClaimView({ tag, onClaimed }) {
 
   return (
     <div
-      className="min-h-screen bg-paper flex flex-col animate-fade-up"
+      className="min-h-screen bg-royal text-white flex flex-col animate-fade-up"
       data-testid="claim-page"
     >
       <div className="max-w-md w-full mx-auto px-5 pt-6 pb-10 flex-1">
         <div className="flex items-center justify-between">
           <BrandMark />
           <span
-            className="text-xs text-ink-muted font-mono"
+            className="text-xs text-white/70 font-mono"
             data-testid="claim-tag-id"
           >
             Tag #{tag.id}
@@ -487,17 +487,17 @@ function ClaimView({ tag, onClaimed }) {
         </div>
 
         <div className="mt-10">
-          <div className="inline-flex items-center gap-2 chip bg-clay/10 text-clay">
-            <span className="w-1.5 h-1.5 rounded-full bg-clay" />
+          <div className="inline-flex items-center gap-2 chip bg-neon text-[#1a1a1a] border-[2.5px] border-[#1a1a1a]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#1a1a1a]" />
             Not activated yet
           </div>
-          <h1 className="mt-4 font-display text-3xl sm:text-4xl font-extrabold leading-tight text-ink">
+          <h1 className="mt-4 font-display text-3xl sm:text-4xl font-extrabold leading-tight text-white">
             This tag isn&apos;t activated yet.
           </h1>
-          <p className="mt-2 font-bn text-lg text-ink-muted">
+          <p className="mt-2 font-bn text-lg text-white/85">
             এই ট্যাগটি এখনো চালু করা হয়নি।
           </p>
-          <p className="mt-4 text-ink-muted leading-relaxed">
+          <p className="mt-4 text-white/75 leading-relaxed">
             Whoever owns this vehicle or card can set it up in under a minute — no
             app required.
           </p>
@@ -505,35 +505,35 @@ function ClaimView({ tag, onClaimed }) {
 
         <form
           onSubmit={submit}
-          className="mt-8 space-y-5 bg-white rounded-2xl border border-black/10 p-6"
+          className="mt-8 space-y-5 brutal-card p-6"
           data-testid="claim-form"
           noValidate
         >
           <div>
-            <Label htmlFor="name" className="text-ink font-semibold">
-              Full name <span className="text-clay">*</span>
+            <Label htmlFor="name" className="text-[#1a1a1a] font-bold">
+              Full name <span className="text-royal">*</span>
             </Label>
-            <p className="text-xs text-ink-muted font-bn mt-0.5">আপনার নাম</p>
+            <p className="text-xs text-[#5C564F] font-bn mt-0.5">আপনার নাম</p>
             <Input
               id="name"
               data-testid="name-input"
               value={form.name}
               onChange={(e) => setField("name", e.target.value)}
               placeholder="e.g. Ananya Deb"
-              className="mt-2 rounded-xl border-black/10 focus-visible:ring-2 focus-visible:ring-clay focus-visible:border-transparent"
+              className="mt-2 rounded-xl border-[2px] border-[#1a1a1a] text-[#1a1a1a] focus-visible:ring-2 focus-visible:ring-royal focus-visible:border-transparent"
             />
             {errors.name && (
-              <p className="mt-1.5 text-xs text-red-600" data-testid="name-error">
+              <p className="mt-1.5 text-xs text-red-600 font-semibold" data-testid="name-error">
                 {errors.name}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="phone" className="text-ink font-semibold">
-              Phone / WhatsApp <span className="text-clay">*</span>
+            <Label htmlFor="phone" className="text-[#1a1a1a] font-bold">
+              Phone / WhatsApp <span className="text-royal">*</span>
             </Label>
-            <p className="text-xs text-ink-muted font-bn mt-0.5">
+            <p className="text-xs text-[#5C564F] font-bn mt-0.5">
               ফোন / হোয়াটসঅ্যাপ নম্বর
             </p>
             <Input
@@ -543,27 +543,27 @@ function ClaimView({ tag, onClaimed }) {
               value={form.phone}
               onChange={(e) => setField("phone", e.target.value)}
               placeholder="e.g. 98765 43210"
-              className="mt-2 rounded-xl border-black/10 focus-visible:ring-2 focus-visible:ring-clay focus-visible:border-transparent"
+              className="mt-2 rounded-xl border-[2px] border-[#1a1a1a] text-[#1a1a1a] focus-visible:ring-2 focus-visible:ring-royal focus-visible:border-transparent"
             />
-            <p className="mt-1 text-[11px] text-ink-muted">
+            <p className="mt-1 text-[11px] text-[#5C564F]">
               Kept private — never shown to strangers.
             </p>
             {errors.phone && (
-              <p className="mt-1.5 text-xs text-red-600" data-testid="phone-error">
+              <p className="mt-1.5 text-xs text-red-600 font-semibold" data-testid="phone-error">
                 {errors.phone}
               </p>
             )}
           </div>
 
           <div>
-            <Label className="text-ink font-semibold">Type of tag</Label>
+            <Label className="text-[#1a1a1a] font-bold">Type of tag</Label>
             <Select
               value={form.type}
               onValueChange={(v) => setField("type", v)}
             >
               <SelectTrigger
                 data-testid="type-select"
-                className="mt-2 rounded-xl border-black/10"
+                className="mt-2 rounded-xl border-[2px] border-[#1a1a1a] text-[#1a1a1a]"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -580,10 +580,10 @@ function ClaimView({ tag, onClaimed }) {
 
           {form.type === "vehicle" && (
             <div>
-              <Label htmlFor="plate" className="text-ink font-semibold">
-                Vehicle number <span className="text-clay">*</span>
+              <Label htmlFor="plate" className="text-[#1a1a1a] font-bold">
+                Vehicle number <span className="text-royal">*</span>
               </Label>
-              <p className="text-xs text-ink-muted font-bn mt-0.5">গাড়ির নম্বর</p>
+              <p className="text-xs text-[#5C564F] font-bn mt-0.5">গাড়ির নম্বর</p>
               <Input
                 id="plate"
                 data-testid="plate-input"
@@ -593,13 +593,13 @@ function ClaimView({ tag, onClaimed }) {
                 }
                 placeholder="TR01A1234"
                 maxLength={12}
-                className="mt-2 rounded-xl border-black/10 font-mono uppercase tracking-wider focus-visible:ring-2 focus-visible:ring-clay focus-visible:border-transparent"
+                className="mt-2 rounded-xl border-[2px] border-[#1a1a1a] text-[#1a1a1a] font-mono uppercase tracking-wider focus-visible:ring-2 focus-visible:ring-royal focus-visible:border-transparent"
               />
-              <p className="mt-1 text-[11px] text-ink-muted">
+              <p className="mt-1 text-[11px] text-[#5C564F]">
                 Tripura plate only. Format: TR + district (01-99) + series (A-Z) + number.
               </p>
               {errors.vehicle_number && (
-                <p className="mt-1.5 text-xs text-red-600" data-testid="plate-error">
+                <p className="mt-1.5 text-xs text-red-600 font-semibold" data-testid="plate-error">
                   {errors.vehicle_number}
                 </p>
               )}
@@ -608,8 +608,8 @@ function ClaimView({ tag, onClaimed }) {
 
           {form.type === "business" && (
             <div>
-              <Label htmlFor="note" className="text-ink font-semibold">
-                What do you do? <span className="text-ink-muted font-normal">(optional)</span>
+              <Label htmlFor="note" className="text-[#1a1a1a] font-bold">
+                What do you do? <span className="text-[#5C564F] font-normal">(optional)</span>
               </Label>
               <Textarea
                 id="note"
@@ -618,34 +618,34 @@ function ClaimView({ tag, onClaimed }) {
                 onChange={(e) => setField("note", e.target.value)}
                 placeholder="e.g. Home-cooked Bengali tiffin service — Agartala"
                 rows={3}
-                className="mt-2 rounded-xl border-black/10 focus-visible:ring-2 focus-visible:ring-clay focus-visible:border-transparent"
+                className="mt-2 rounded-xl border-[2px] border-[#1a1a1a] text-[#1a1a1a] focus-visible:ring-2 focus-visible:ring-royal focus-visible:border-transparent"
               />
             </div>
           )}
 
           {serverError && (
             <div
-              className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2"
+              className="text-sm text-red-700 bg-red-50 border-2 border-red-300 rounded-lg px-3 py-2 font-semibold"
               data-testid="server-error"
             >
               {serverError}
             </div>
           )}
 
-          <Button
+          <button
             type="submit"
             data-testid="activate-button"
             disabled={submitting}
-            className="btn-clay w-full rounded-full min-h-[56px] font-display text-base font-bold"
+            className="btn-neon w-full rounded-full min-h-[56px] font-display text-base font-black flex items-center justify-center gap-2"
           >
             {submitting ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" /> Activating…
+                <Loader2 className="w-4 h-4 animate-spin" /> Activating…
               </>
             ) : (
               "Activate this tag"
             )}
-          </Button>
+          </button>
         </form>
 
         <PublicFooter tagId={tag.id} />
@@ -683,8 +683,8 @@ export default function PublicTagPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-paper flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-clay" />
+      <div className="min-h-screen bg-royal flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-neon" />
       </div>
     );
   }
@@ -692,23 +692,47 @@ export default function PublicTagPage() {
   if (notFound) {
     return (
       <div
-        className="min-h-screen bg-paper flex flex-col items-center justify-center px-6 text-center"
+        className="min-h-screen bg-royal text-white flex flex-col items-center justify-center px-6 text-center"
         data-testid="tag-not-found"
       >
         <BrandMark />
-        <h1 className="mt-8 font-display text-3xl font-extrabold text-ink">
+        <h1 className="mt-8 font-display text-3xl font-extrabold text-white">
           Tag not found
         </h1>
-        <p className="mt-2 text-ink-muted">
+        <p className="mt-2 text-white/75">
           The tag <span className="font-mono">#{tagId}</span> doesn&apos;t exist in our
           system.
         </p>
         <button
           onClick={() => navigate("/")}
           data-testid="not-found-home"
-          className="mt-6 chip bg-ink text-white hover:bg-ink/90 px-4 py-2"
+          className="mt-6 btn-neon rounded-full px-5 py-2 font-display font-black"
         >
           Go home
+        </button>
+      </div>
+    );
+  }
+
+  if (!tag) {
+    return (
+      <div
+        className="min-h-screen bg-royal text-white flex flex-col items-center justify-center px-6 text-center"
+        data-testid="tag-error"
+      >
+        <BrandMark />
+        <h1 className="mt-8 font-display text-3xl font-extrabold text-white">
+          Something went wrong
+        </h1>
+        <p className="mt-2 text-white/75 max-w-sm">
+          We couldn&apos;t load this tag right now. Please try again in a moment.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          data-testid="tag-error-retry"
+          className="mt-6 btn-neon rounded-full px-5 py-2 font-display font-black"
+        >
+          Retry
         </button>
       </div>
     );
