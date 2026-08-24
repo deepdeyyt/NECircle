@@ -233,7 +233,7 @@ export default function LandingPage() {
               <br />
               that lets anyone
               <br />
-              reach the owner —
+              reach the owner&nbsp;—
               <br />
               <span className="text-neon">without an app.</span>
             </h1>

@@ -296,7 +296,7 @@ function VehicleClaimedView({ tag }) {
           <motion.p
             key={`spam-${lang}`}
             {...fadeProps}
-            className={`mt-3 text-center text-xs text-white/70 leading-snug font-semibold ${
+            className={`mt-3 text-center text-xs text-neon/95 leading-snug font-bold ${
               lang === "bn" ? "font-bn" : ""
             }`}
             data-testid="spam-notice"

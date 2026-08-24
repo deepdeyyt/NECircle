@@ -11,6 +11,7 @@ import hmac
 import hashlib
 import zipfile
 import logging
+import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Literal
 
@@ -21,14 +22,14 @@ import razorpay
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, field_validator
-from supabase import create_client, Client
 
 # ------------------------------------------------------------
 # Config
 # ------------------------------------------------------------
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
+MONGO_URL = os.environ["MONGO_URL"]
+DB_NAME = os.environ["DB_NAME"]
 JWT_SECRET = os.environ["JWT_SECRET"]
 JWT_ALG = "HS256"
 JWT_EXPIRE_HOURS = 24
@@ -40,7 +41,8 @@ RAZORPAY_KEY_SECRET = os.environ["RAZORPAY_KEY_SECRET"]
 ORDER_PRICE_PAISE = int(os.environ.get("ORDER_PRICE_PAISE", "9900"))
 TAGS_PER_ORDER = 1  # one QR/id per ₹99 order — printed in 3 languages
 
-sb: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+client = AsyncIOMotorClient(MONGO_URL)
+db = client[DB_NAME]
 rzp = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 app = FastAPI(title="NECircle API")
@@ -128,12 +130,12 @@ def next_id_from(max_id: Optional[str]) -> int:
         return 1
 
 
-def tag_row_to_public(row: dict) -> dict:
+def tag_to_public(doc: dict) -> dict:
     return {
-        "id": row["id"],
-        "status": row["status"],
-        "created_at": row.get("created_at"),
-        "profile": row.get("profile"),
+        "id": doc["id"],
+        "status": doc["status"],
+        "created_at": doc.get("created_at"),
+        "profile": doc.get("profile"),
     }
 
 
@@ -205,41 +207,35 @@ class VerifyPaymentIn(BaseModel):
 
 
 # ------------------------------------------------------------
-# Startup: verify schema + seed admin
+# Startup
 # ------------------------------------------------------------
 @app.on_event("startup")
 async def startup():
-    try:
-        sb.table("tags").select("id").limit(1).execute()
-    except Exception as e:
-        logger.error(
-            "Supabase schema not ready. Paste /app/backend/schema.sql into "
-            "Supabase Dashboard → SQL Editor → Run once. Details: %s",
-            e,
+    await db.tags.create_index("id", unique=True)
+    await db.users.create_index("email", unique=True)
+    await db.orders.create_index("razorpay_order_id", unique=True, sparse=True)
+    existing = await db.users.find_one({"email": ADMIN_EMAIL})
+    if not existing:
+        await db.users.insert_one(
+            {
+                "email": ADMIN_EMAIL,
+                "password_hash": hash_password(ADMIN_PASSWORD),
+                "role": "admin",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
         )
-        return
+        logger.info("Seeded admin %s", ADMIN_EMAIL)
+    elif not verify_password(ADMIN_PASSWORD, existing["password_hash"]):
+        await db.users.update_one(
+            {"email": ADMIN_EMAIL},
+            {"$set": {"password_hash": hash_password(ADMIN_PASSWORD)}},
+        )
+        logger.info("Updated admin password for %s", ADMIN_EMAIL)
 
-    # Seed admin
-    try:
-        existing = sb.table("users").select("*").eq("email", ADMIN_EMAIL).limit(1).execute()
-        if not existing.data:
-            sb.table("users").insert(
-                {
-                    "email": ADMIN_EMAIL,
-                    "password_hash": hash_password(ADMIN_PASSWORD),
-                    "role": "admin",
-                }
-            ).execute()
-            logger.info("Seeded admin %s", ADMIN_EMAIL)
-        else:
-            u = existing.data[0]
-            if not verify_password(ADMIN_PASSWORD, u["password_hash"]):
-                sb.table("users").update(
-                    {"password_hash": hash_password(ADMIN_PASSWORD)}
-                ).eq("email", ADMIN_EMAIL).execute()
-                logger.info("Updated admin password for %s", ADMIN_EMAIL)
-    except Exception as e:
-        logger.error("Admin seed failed: %s", e)
+
+@app.on_event("shutdown")
+async def shutdown():
+    client.close()
 
 
 # ------------------------------------------------------------
@@ -248,8 +244,7 @@ async def startup():
 @api.post("/auth/login")
 async def login(body: LoginIn, response: Response):
     email = body.email.strip().lower()
-    res = sb.table("users").select("*").eq("email", email).limit(1).execute()
-    user = res.data[0] if res.data else None
+    user = await db.users.find_one({"email": email})
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_token(email)
@@ -281,21 +276,19 @@ async def me(payload: dict = Depends(require_admin)):
 # ------------------------------------------------------------
 @api.get("/tags/{tag_id}")
 async def get_tag(tag_id: str):
-    res = sb.table("tags").select("*").eq("id", tag_id).limit(1).execute()
-    if not res.data:
+    doc = await db.tags.find_one({"id": tag_id})
+    if not doc:
         raise HTTPException(status_code=404, detail="Tag not found")
-    return tag_row_to_public(res.data[0])
+    return tag_to_public(doc)
 
 
 @api.post("/tags/{tag_id}/claim")
 async def claim_tag(tag_id: str, body: ClaimIn):
-    res = sb.table("tags").select("*").eq("id", tag_id).limit(1).execute()
-    if not res.data:
+    doc = await db.tags.find_one({"id": tag_id})
+    if not doc:
         raise HTTPException(status_code=404, detail="Tag not found")
-    tag = res.data[0]
-    if tag["status"] == "active":
+    if doc.get("status") == "active":
         raise HTTPException(status_code=409, detail="Tag already activated")
-
     if body.type == "vehicle" and not body.vehicle_number:
         raise HTTPException(status_code=422, detail="Vehicle number is required")
 
@@ -307,32 +300,23 @@ async def claim_tag(tag_id: str, body: ClaimIn):
         "vehicle_number": body.vehicle_number if body.type == "vehicle" else None,
         "claimed_at": datetime.now(timezone.utc).isoformat(),
     }
-    upd = (
-        sb.table("tags")
-        .update({"status": "active", "profile": profile})
-        .eq("id", tag_id)
-        .execute()
+    await db.tags.update_one(
+        {"id": tag_id},
+        {"$set": {"status": "active", "profile": profile}},
     )
-    return tag_row_to_public(upd.data[0])
+    updated = await db.tags.find_one({"id": tag_id})
+    return tag_to_public(updated)
 
 
 # ------------------------------------------------------------
-# Admin: stats + tag inventory + batch
+# Admin
 # ------------------------------------------------------------
-def _count(table: str, filters: dict | None = None) -> int:
-    q = sb.table(table).select("id", count="exact")
-    if filters:
-        for k, v in filters.items():
-            q = q.eq(k, v)
-    return q.execute().count or 0
-
-
 @api.get("/admin/stats")
 async def stats(_: dict = Depends(require_admin)):
-    printed = _count("tags")
-    activated = _count("tags", {"status": "active"})
-    unassigned = _count("tags", {"status": "unassigned"})
-    orders_paid = _count("orders", {"status": "paid"})
+    printed = await db.tags.count_documents({})
+    activated = await db.tags.count_documents({"status": "active"})
+    unassigned = await db.tags.count_documents({"status": "unassigned"})
+    orders_paid = await db.orders.count_documents({"status": "paid"})
     return {
         "printed": printed,
         "activated": activated,
@@ -343,24 +327,34 @@ async def stats(_: dict = Depends(require_admin)):
 
 @api.get("/admin/tags")
 async def list_tags(_: dict = Depends(require_admin)):
-    res = sb.table("tags").select("*").order("id").limit(10000).execute()
-    return [tag_row_to_public(r) for r in res.data]
+    docs = (
+        await db.tags.find({}, {"_id": 0}).sort("id", 1).to_list(length=10000)
+    )
+    return [tag_to_public(d) for d in docs]
 
 
 @api.post("/admin/tags/batch")
 async def create_batch(body: BatchIn, _: dict = Depends(require_admin)):
-    latest = sb.table("tags").select("id").order("id", desc=True).limit(1).execute()
-    start = next_id_from(latest.data[0]["id"] if latest.data else None)
-    new_rows = [
-        {"id": zero_pad(start + i), "status": "unassigned", "profile": None}
+    latest = (
+        await db.tags.find({}, {"id": 1, "_id": 0}).sort("id", -1).limit(1).to_list(1)
+    )
+    start = next_id_from(latest[0]["id"] if latest else None)
+    now = datetime.now(timezone.utc).isoformat()
+    new_docs = [
+        {
+            "id": zero_pad(start + i),
+            "status": "unassigned",
+            "created_at": now,
+            "profile": None,
+        }
         for i in range(body.count)
     ]
-    if new_rows:
-        sb.table("tags").insert(new_rows).execute()
+    if new_docs:
+        await db.tags.insert_many(new_docs)
     return {
-        "created": len(new_rows),
-        "from": new_rows[0]["id"] if new_rows else None,
-        "to": new_rows[-1]["id"] if new_rows else None,
+        "created": len(new_docs),
+        "from": new_docs[0]["id"] if new_docs else None,
+        "to": new_docs[-1]["id"] if new_docs else None,
     }
 
 
@@ -387,10 +381,12 @@ async def qr_zip(
     scope: str = "unassigned",
     _: dict = Depends(require_admin),
 ):
-    q = sb.table("tags").select("id")
-    if scope != "all":
-        q = q.eq("status", "unassigned")
-    docs = q.order("id").limit(10000).execute().data
+    query = {} if scope == "all" else {"status": "unassigned"}
+    docs = (
+        await db.tags.find(query, {"_id": 0, "id": 1})
+        .sort("id", 1)
+        .to_list(length=10000)
+    )
     if not docs:
         raise HTTPException(status_code=404, detail="No tags to export")
 
@@ -407,7 +403,9 @@ async def qr_zip(
             )
             qr.add_data(url)
             qr.make(fit=True)
-            img = qr.make_image(fill_color="#2A2521", back_color="#FBF7F1").convert("RGB")
+            img = qr.make_image(fill_color="#2A2521", back_color="#FBF7F1").convert(
+                "RGB"
+            )
             png = io.BytesIO()
             img.save(png, format="PNG")
             zf.writestr(f"NECircle-{tid}.png", png.getvalue())
@@ -437,26 +435,23 @@ async def order_config():
 @api.post("/orders/create")
 async def create_order(body: CreateOrderIn):
     amount_paise = ORDER_PRICE_PAISE * body.quantity
+    order_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
 
-    # Insert local pending order first
-    order_row = (
-        sb.table("orders")
-        .insert(
-            {
-                "customer_name": body.customer_name.strip(),
-                "customer_phone": body.customer_phone,
-                "address": body.address.strip(),
-                "quantity": body.quantity,
-                "amount_paise": amount_paise,
-                "status": "pending",
-            }
-        )
-        .execute()
-        .data[0]
+    await db.orders.insert_one(
+        {
+            "id": order_id,
+            "customer_name": body.customer_name.strip(),
+            "customer_phone": body.customer_phone,
+            "address": body.address.strip(),
+            "quantity": body.quantity,
+            "amount_paise": amount_paise,
+            "status": "pending",
+            "created_at": now,
+        }
     )
 
-    # Create Razorpay order
-    receipt = f"nec_{order_row['id'][:8]}"
+    receipt = f"nec_{order_id[:8]}"
     try:
         rz_order = rzp.order.create(
             {
@@ -466,28 +461,25 @@ async def create_order(body: CreateOrderIn):
                 "notes": {
                     "customer_name": body.customer_name,
                     "customer_phone": body.customer_phone,
-                    "order_id": order_row["id"],
+                    "order_id": order_id,
                 },
             }
         )
     except Exception as e:
-        sb.table("orders").update({"status": "failed"}).eq("id", order_row["id"]).execute()
+        await db.orders.update_one({"id": order_id}, {"$set": {"status": "failed"}})
         raise HTTPException(status_code=502, detail=f"Razorpay error: {e}") from e
 
-    sb.table("orders").update({"razorpay_order_id": rz_order["id"]}).eq(
-        "id", order_row["id"]
-    ).execute()
+    await db.orders.update_one(
+        {"id": order_id}, {"$set": {"razorpay_order_id": rz_order["id"]}}
+    )
 
     return {
-        "order_id": order_row["id"],
+        "order_id": order_id,
         "razorpay_order_id": rz_order["id"],
         "amount_paise": amount_paise,
         "currency": "INR",
         "razorpay_key_id": RAZORPAY_KEY_ID,
-        "customer": {
-            "name": body.customer_name,
-            "phone": body.customer_phone,
-        },
+        "customer": {"name": body.customer_name, "phone": body.customer_phone},
     }
 
 
@@ -499,14 +491,19 @@ def _verify_signature(rz_order_id: str, rz_payment_id: str, signature: str) -> b
     return hmac.compare_digest(expected, signature)
 
 
-def _allocate_tags_for_order(count: int) -> list[str]:
-    """Allocate 'count' new unassigned tag IDs at the tail of the sequence."""
-    latest = sb.table("tags").select("id").order("id", desc=True).limit(1).execute()
-    start = next_id_from(latest.data[0]["id"] if latest.data else None)
+async def _allocate_tags_for_order(count: int) -> list[str]:
+    latest = (
+        await db.tags.find({}, {"id": 1, "_id": 0}).sort("id", -1).limit(1).to_list(1)
+    )
+    start = next_id_from(latest[0]["id"] if latest else None)
     ids = [zero_pad(start + i) for i in range(count)]
-    sb.table("tags").insert(
-        [{"id": tid, "status": "unassigned", "profile": None} for tid in ids]
-    ).execute()
+    now = datetime.now(timezone.utc).isoformat()
+    await db.tags.insert_many(
+        [
+            {"id": tid, "status": "unassigned", "created_at": now, "profile": None}
+            for tid in ids
+        ]
+    )
     return ids
 
 
@@ -517,51 +514,43 @@ async def verify_payment(body: VerifyPaymentIn):
     ):
         raise HTTPException(status_code=400, detail="Invalid payment signature")
 
-    res = (
-        sb.table("orders")
-        .select("*")
-        .eq("razorpay_order_id", body.razorpay_order_id)
-        .limit(1)
-        .execute()
-    )
-    if not res.data:
+    order = await db.orders.find_one({"razorpay_order_id": body.razorpay_order_id})
+    if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    order = res.data[0]
 
-    if order["status"] == "paid":
+    if order.get("status") == "paid":
         return {
             "ok": True,
             "order_id": order["id"],
             "tag_ids": order.get("tag_ids") or [],
         }
 
-    # Allocate tags for this order (1 per order — printed in 3 languages)
     total_tags = TAGS_PER_ORDER * (order.get("quantity") or 1)
-    tag_ids = _allocate_tags_for_order(total_tags)
+    tag_ids = await _allocate_tags_for_order(total_tags)
 
-    sb.table("orders").update(
+    await db.orders.update_one(
+        {"id": order["id"]},
         {
-            "status": "paid",
-            "razorpay_payment_id": body.razorpay_payment_id,
-            "razorpay_signature": body.razorpay_signature,
-            "tag_ids": tag_ids,
-            "paid_at": datetime.now(timezone.utc).isoformat(),
-        }
-    ).eq("id", order["id"]).execute()
-
+            "$set": {
+                "status": "paid",
+                "razorpay_payment_id": body.razorpay_payment_id,
+                "razorpay_signature": body.razorpay_signature,
+                "tag_ids": tag_ids,
+                "paid_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
     return {"ok": True, "order_id": order["id"], "tag_ids": tag_ids}
 
 
 @api.get("/admin/orders")
 async def list_orders(_: dict = Depends(require_admin)):
-    res = (
-        sb.table("orders")
-        .select("*")
-        .order("created_at", desc=True)
-        .limit(500)
-        .execute()
+    docs = (
+        await db.orders.find({}, {"_id": 0})
+        .sort("created_at", -1)
+        .to_list(length=500)
     )
-    return res.data
+    return docs
 
 
 # ------------------------------------------------------------

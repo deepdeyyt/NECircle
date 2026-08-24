@@ -1,0 +1,44 @@
+{
+  "summary": "Full regression after the Supabase->MongoDB revert of /app/backend/server.py. Backend: 37 pytest cases in /app/backend/tests/backend_test.py (36 passed, 1 failed) covering health, auth (login/logout/me, cookie+bearer, case-insensitivity, bcrypt hash format in Mongo, brute force), admin stats/tags/batch/qr-zip/orders, public tag get/claim with phone+plate normalization and all 422/404/409 edge cases, and Razorpay orders config/create/verify(bad signature). Frontend: 4 Playwright runs covering landing (logo, hero, nav, faq, mobile), buy modal + LIVE Razorpay checkout open (no capture), /admin combined login+dashboard (invalid+valid login, session persistence, batch generation, logout), public vehicle scan page (plate, 3 languages, 5 reasons, call/whatsapp/emergency hrefs), business claim flow with validation, and 404 tag page. PRIMARY BUG IS FIXED: operator login works end-to-end (200 + JWT + httpOnly cookie) and dashboard loads.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/auth/login", "issue": "No brute-force protection / lockout. 6+ consecutive wrong-password attempts all return 401 with no 429/423 and no delay. Playbook requires lockout after 5 failures."},
+      {"endpoint": "CORS middleware", "issue": "CORS_ORIGINS=\"*\" combined with allow_credentials=True. Response sends 'Access-Control-Allow-Origin: *' AND 'Access-Control-Allow-Credentials: true', which is spec-invalid: browsers will reject any credentialed cross-origin request, so the httpOnly cookie auth path silently cannot work cross-origin. Use explicit origin list."},
+      {"endpoint": "GET /api/admin/orders", "issue": "Returns raw order docs including razorpay_signature and razorpay_payment_id; should be projected out of the admin listing."},
+      {"endpoint": "POST /api/tags/{id}/claim", "issue": "Non-atomic claim (find_one then update_one). Two concurrent claims can both pass the status check; use find_one_and_update with {status:'unassigned'} filter. Also no rate limiting even though the public page displays 'Spam may get your IP and number blocked for up to 6 months.'"},
+      {"endpoint": "GET /api/orders/config", "issue": "Returns tags_per_order: 3 (hardcoded) while backend TAGS_PER_ORDER = 1 tag actually allocated per order. Values are intentionally different (1 QR id, 3 language stickers) but the shared field name is misleading and will drift."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Landing hero (mobile 390px)", "issues": ["Em dash in the h1 wraps onto its own line ('reach the owner —' / 'without an app.') producing an orphan dash", "Large decorative taupe/brown blob sits directly behind the hero paragraph and CTA buttons, muddying contrast on mobile"]},
+      {"screen": "Public vehicle page", "issues": ["Spam notice text (data-testid=spam-notice) is light purple on the purple background — low contrast, hard to read"]},
+      {"screen": "Landing FAQ", "issues": ["faq-toggle has no aria-expanded attribute (returned None) — accessibility gap for an accordion control"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Add brute-force lockout (5 failed logins) on POST /api/auth/login",
+    "Replace CORS_ORIGINS=\"*\" with explicit origin list since allow_credentials=True",
+    "Project razorpay_signature/razorpay_payment_id out of GET /api/admin/orders",
+    "Make tag claim atomic (find_one_and_update with status filter) and add rate limiting to the public claim endpoint",
+    "Fix mobile hero em-dash wrap + spam-notice contrast; add aria-expanded to faq-toggle"
+  ],
+  "critical_code_review_comments": [
+    "@app.on_event('startup'/'shutdown') is deprecated in current FastAPI — migrate to a lifespan context manager.",
+    "JWT is stored in localStorage ('necircle_token') while the backend also sets an httpOnly cookie; the localStorage copy negates the httpOnly protection (XSS token theft). Pick one mechanism.",
+    "next_id_from()/_allocate_tags_for_order() derive ids from max existing id without a transaction — concurrent batch creation or paid-order allocation can collide on the unique 'id' index and raise 500. Use a counter document with $inc.",
+    "_verify_signature is correct (HMAC-SHA256 over 'order|payment' with key secret) and rejects bad signatures with 400 as expected."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "97% (36/37)", "frontend": "100% of tested flows"},
+  "seed_data_creation": "Created several sequential test tags via POST /api/admin/tags/batch (ids ~00190-00199); claimed a few with name 'TEST Owner/TEST Shop/TEST Vehicle Owner', phone 9876543210, plate TR-01-A-1234. Created ~2 pending Razorpay LIVE orders for 'TEST Buyer' (order_TThhQam6r2Fqnf and one more) — NOT captured/paid, they remain 'pending'.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@necircle.in / Admin@123 (verified working; bcrypt hash in Mongo starts with $2b$)",
+  "context_for_next_testing_agent": "Regression suite lives at /app/backend/tests/backend_test.py (pytest, xdist loadscope preconfigured). Only failing test is TestAuth::test_brute_force_lockout (feature genuinely absent). Note: use a fresh requests session (bare requests.*) for 401/no-auth assertions — the module-scoped session picks up the access_token cookie after any login call. Razorpay is LIVE: /orders/create is safe, never complete checkout. Frontend testids all present including stat-printed/activated/unassigned/orders, lang-en/kok/bn, reason-lights/no_parking/towed/open/wrong.",
+  "rca_of_the_issue": "Original 'operator login failed' was caused by the Supabase migration leaving users/tags tables absent, so login returned 401. The revert to MongoDB (motor) with startup admin re-seed resolves it: POST /api/auth/login returns 200 with JWT + httpOnly Secure SameSite=None cookie, GET /api/auth/me returns {email, role:'admin'} for both Bearer and cookie, and /admin renders the dashboard after submit. Verified admin doc exists in Mongo with a $2b$ bcrypt hash and that seed_admin rewrites the hash when ADMIN_PASSWORD no longer matches."
+}
