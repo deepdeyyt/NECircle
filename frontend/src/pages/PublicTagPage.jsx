@@ -12,6 +12,7 @@ import {
   Ambulance,
   ShieldCheck,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { api, formatApiError } from "../lib/api";
 import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/ui/button";
@@ -25,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { LANGS, T } from "./translations";
 
 const INDIAN_PHONE = /^(?:\+91[\s-]?|0)?[6-9]\d{9}$/;
 const PLATE_RE = /^TR\d{2}[A-Z]{1,3}\d{1,4}$/;
@@ -48,25 +50,25 @@ function PublicFooter({ tagId }) {
   );
 }
 
-/* ---------------- Indian number plate ---------------- */
+/* ---------------- Indian number plate (brutalist) ---------------- */
 function IndianPlate({ number }) {
   return (
     <div
-      className="inline-flex flex-col rounded-md overflow-hidden border-2 border-ink shadow-sm"
+      className="inline-flex flex-col rounded-lg overflow-hidden border-[3px] border-black bg-white shadow-[6px_6px_0_0_#000]"
       data-testid="plate-display"
     >
-      <div className="bg-[#0F1E5B] text-white text-[10px] font-display font-bold tracking-[0.35em] text-center py-0.5 px-6">
+      <div className="bg-[#0F1E5B] text-white text-[10px] font-display font-black tracking-[0.35em] text-center py-1 px-8 border-b-[3px] border-black">
         IND
       </div>
       <div className="flex items-stretch bg-white">
-        <div className="w-2 flex flex-col">
+        <div className="w-3 flex flex-col border-r-[3px] border-black">
           <div className="flex-1 bg-[#FF9933]" />
-          <div className="flex-1 bg-white border-y border-white flex items-center justify-center">
-            <div className="w-1 h-1 rounded-full bg-[#0F1E5B]" />
+          <div className="flex-1 bg-white flex items-center justify-center">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#0F1E5B]" />
           </div>
           <div className="flex-1 bg-[#138808]" />
         </div>
-        <div className="px-3 py-1.5 font-mono font-extrabold text-2xl sm:text-3xl tracking-wider text-ink">
+        <div className="px-4 py-2 font-mono font-black text-2xl sm:text-3xl tracking-widest text-black">
           {number || "TR-••-•-••••"}
         </div>
       </div>
@@ -74,19 +76,19 @@ function IndianPlate({ number }) {
   );
 }
 
-/* ---------------- Reason card ---------------- */
-const REASONS = [
-  { id: "lights", icon: Sun, en: "The lights of this car are on.", bn: "গাড়ির লাইট জ্বলছে।" },
-  { id: "no_parking", icon: ParkingCircle, en: "The car is in no parking.", bn: "গাড়িটি নো-পার্কিং এ আছে।" },
-  { id: "towed", icon: Truck, en: "The car is getting towed.", bn: "গাড়িটি টো করা হচ্ছে।" },
-  { id: "open", icon: Maximize2, en: "The window or car is open.", bn: "জানালা / দরজা খোলা।" },
-  { id: "wrong", icon: Siren, en: "Something wrong with this car.", bn: "গাড়িতে কিছু সমস্যা আছে।" },
+/* ---------------- Reason card (brutalist) ---------------- */
+const REASONS_META = [
+  { id: "lights", icon: Sun, tint: "#FFE44D" },
+  { id: "no_parking", icon: ParkingCircle, tint: "#7CE4FF" },
+  { id: "towed", icon: Truck, tint: "#FF9F5A" },
+  { id: "open", icon: Maximize2, tint: "#B6F09C" },
+  { id: "wrong", icon: Siren, tint: "#FF6B9E" },
 ];
 
-function ReasonList({ selected, onSelect }) {
+function ReasonList({ selected, onSelect, t }) {
   return (
-    <div className="mt-3 space-y-2.5" data-testid="reason-list">
-      {REASONS.map((r) => {
+    <div className="mt-4 space-y-3" data-testid="reason-list">
+      {REASONS_META.map((r) => {
         const active = selected === r.id;
         return (
           <button
@@ -94,22 +96,24 @@ function ReasonList({ selected, onSelect }) {
             type="button"
             onClick={() => onSelect(active ? null : r.id)}
             data-testid={`reason-${r.id}`}
-            className={`w-full flex items-center gap-3 rounded-2xl border bg-white px-4 py-3.5 text-left transition-colors ${
+            style={{ backgroundColor: active ? r.tint : "#ffffff" }}
+            className={`w-full flex items-center gap-3 rounded-2xl border-[3px] border-black px-4 py-3.5 text-left transition-all duration-150 ${
               active
-                ? "border-clay ring-2 ring-clay/20"
-                : "border-black/10 hover:border-black/25"
+                ? "shadow-[2px_2px_0_0_#000] translate-x-[2px] translate-y-[2px]"
+                : "shadow-[5px_5px_0_0_#000] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[6px_6px_0_0_#000]"
             }`}
           >
-            <r.icon
-              className={`w-5 h-5 shrink-0 ${active ? "text-clay" : "text-ink-muted"}`}
-              strokeWidth={2.2}
-            />
-            <span className="flex-1 text-[15px] font-medium text-ink leading-snug">
-              {r.en}
+            <span
+              className="w-10 h-10 rounded-xl border-[2.5px] border-black flex items-center justify-center bg-white shrink-0"
+            >
+              <r.icon className="w-5 h-5 text-black" strokeWidth={2.5} />
+            </span>
+            <span className="flex-1 text-[15px] font-display font-bold text-black leading-snug">
+              {t.reasons[r.id]}
             </span>
             <span
-              className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
-                active ? "border-clay bg-clay" : "border-black/25"
+              className={`w-6 h-6 rounded-full border-[2.5px] border-black shrink-0 flex items-center justify-center ${
+                active ? "bg-black" : "bg-white"
               }`}
             >
               {active && <span className="w-2 h-2 rounded-full bg-white" />}
@@ -121,115 +125,218 @@ function ReasonList({ selected, onSelect }) {
   );
 }
 
-/* ---------------- VEHICLE Claimed view ---------------- */
+/* ---------------- Language switcher ---------------- */
+function LangSwitcher({ value, onChange }) {
+  return (
+    <div className="flex items-center gap-2.5" data-testid="lang-switcher">
+      {LANGS.map((l) => {
+        const active = value === l.code;
+        return (
+          <button
+            key={l.code}
+            type="button"
+            onClick={() => onChange(l.code)}
+            data-testid={`lang-${l.code}`}
+            style={{ backgroundColor: active ? l.color : "#ffffff" }}
+            className={`px-3.5 py-1.5 rounded-full border-[2.5px] border-black font-display font-black text-xs uppercase tracking-wider transition-all duration-150 ${
+              active
+                ? "shadow-[2px_2px_0_0_#000] translate-x-[1px] translate-y-[1px] text-black"
+                : "shadow-[3px_3px_0_0_#000] text-black hover:-translate-y-[1px]"
+            } ${l.code === "bn" ? "font-bn" : ""}`}
+          >
+            {l.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------------- VEHICLE Claimed view (Neo-brutalist) ---------------- */
 function VehicleClaimedView({ tag }) {
   const { profile, id } = tag;
   const phone10 = last10(profile.phone);
   const [reason, setReason] = useState(null);
+  const [lang, setLang] = useState("en");
+  const t = T[lang];
 
-  const reasonText = () => {
-    if (!reason) return "";
-    const r = REASONS.find((x) => x.id === reason);
-    return r ? r.en : "";
-  };
+  const reasonText = () => (reason ? t.reasons[reason] : "");
+  const plate = profile.vehicle_number || `tag #${id}`;
+  const waHref = `https://wa.me/91${phone10}?text=${encodeURIComponent(t.wa(plate, reasonText()))}`;
 
-  const buildWa = () => {
-    const plate = profile.vehicle_number || `tag #${id}`;
-    const base = reasonText()
-      ? `Hi, regarding your vehicle ${plate}: ${reasonText()}`
-      : `Hi, regarding your vehicle ${plate}.`;
-    return `https://wa.me/91${phone10}?text=${encodeURIComponent(base)}`;
+  const fadeProps = {
+    initial: { opacity: 0, y: 6 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -6 },
+    transition: { duration: 0.25, ease: "easeOut" },
   };
 
   return (
     <div
-      className="min-h-screen bg-paper flex flex-col animate-fade-up"
+      className="min-h-screen relative overflow-hidden"
+      style={{ backgroundColor: "#FFE44D" }}
       data-testid="contact-page"
       data-tag-type="vehicle"
     >
-      <div className="max-w-md w-full mx-auto px-5 pt-6 pb-10 flex-1">
-        <div className="flex items-center justify-between">
-          <BrandMark />
-          <span className="text-xs text-ink-muted font-mono">#{id}</span>
+      {/* Decorative blobs */}
+      <div
+        className="absolute -top-24 -left-20 w-64 h-64 rounded-full pointer-events-none"
+        style={{ backgroundColor: "#FF3B7F" }}
+      />
+      <div
+        className="absolute bottom-24 -right-20 w-72 h-72 rounded-full pointer-events-none"
+        style={{ backgroundColor: "#7C4DFF" }}
+      />
+
+      <div className="max-w-md w-full mx-auto px-5 pt-5 pb-10 relative z-10">
+        {/* Top bar */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="inline-flex items-baseline gap-2 bg-white border-[2.5px] border-black rounded-full pl-3 pr-4 py-1 shadow-[3px_3px_0_0_#000]">
+            <span className="font-display text-lg font-black text-black">
+              NE<span className="text-[#B5502F]">Circle</span>
+            </span>
+          </div>
+          <span
+            className="font-mono text-[11px] font-bold bg-black text-white px-2.5 py-1 rounded-full"
+            data-testid="tag-id-chip"
+          >
+            #{id}
+          </span>
         </div>
 
-        <div className="mt-8">
-          <h1
-            className="font-display text-3xl sm:text-4xl font-extrabold text-ink"
+        {/* Language switcher */}
+        <div className="mt-5">
+          <LangSwitcher value={lang} onChange={setLang} />
+        </div>
+
+        {/* Header */}
+        <AnimatePresence mode="wait">
+          <motion.h1
+            key={`title-${lang}`}
+            {...fadeProps}
+            className={`mt-6 font-display text-[34px] leading-[1.05] font-black text-black tracking-tight ${
+              lang === "bn" ? "font-bn" : ""
+            }`}
             data-testid="contact-heading"
           >
-            Contact vehicle owner
-          </h1>
-          <p className="mt-1 font-bn text-base text-ink-muted">
-            গাড়ির মালিকের সাথে যোগাযোগ করুন
-          </p>
+            {t.contact_title}
+          </motion.h1>
+        </AnimatePresence>
 
-          <div className="mt-5 bg-white rounded-2xl border border-black/10 p-5">
-            <IndianPlate number={profile.vehicle_number} />
-            <p className="mt-3 text-[11px] uppercase tracking-widest text-ink-muted font-semibold">
-              Tripura · IND
-            </p>
-          </div>
+        {/* Plate card */}
+        <div className="mt-5 bg-white rounded-2xl border-[3px] border-black p-5 shadow-[6px_6px_0_0_#000]">
+          <IndianPlate number={profile.vehicle_number} />
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={`region-${lang}`}
+              {...fadeProps}
+              className={`mt-3 text-[11px] uppercase tracking-[0.25em] text-black font-display font-black ${
+                lang === "bn" ? "font-bn" : ""
+              }`}
+            >
+              {t.region}
+            </motion.p>
+          </AnimatePresence>
         </div>
 
-        <div className="mt-8">
-          <h2 className="font-display font-bold text-lg text-ink">
-            Why contact the vehicle owner?
-          </h2>
-          <p className="mt-0.5 font-bn text-sm text-ink-muted">
-            আপনি কেন যোগাযোগ করছেন?
-          </p>
-          <ReasonList selected={reason} onSelect={setReason} />
-        </div>
+        {/* Why */}
+        <AnimatePresence mode="wait">
+          <motion.h2
+            key={`why-${lang}`}
+            {...fadeProps}
+            className={`mt-8 font-display font-black text-black text-xl uppercase tracking-tight ${
+              lang === "bn" ? "font-bn text-lg" : ""
+            }`}
+          >
+            {t.why}
+          </motion.h2>
+        </AnimatePresence>
 
+        <AnimatePresence mode="wait">
+          <motion.div key={`reasons-${lang}`} {...fadeProps}>
+            <ReasonList selected={reason} onSelect={setReason} t={t} />
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Action buttons */}
         <div className="mt-6 grid grid-cols-2 gap-3">
           <a
-            href={buildWa()}
+            href={waHref}
             target="_blank"
             rel="noopener noreferrer"
             data-testid="whatsapp-button"
-            className="flex items-center justify-center gap-2 rounded-full border-2 border-teal bg-white text-teal font-display font-bold min-h-[56px] px-4 hover:bg-teal/5 transition-colors"
+            className="flex items-center justify-center gap-2 rounded-full border-[3px] border-black bg-white text-black font-display font-black min-h-[58px] px-4 shadow-[5px_5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[2px_2px_0_0_#000] transition-all duration-150"
           >
-            <MessageCircle className="w-4 h-4" strokeWidth={2.4} />
-            Message
+            <MessageCircle className="w-5 h-5 text-[#0F6E56]" strokeWidth={2.6} />
+            <AnimatePresence mode="wait">
+              <motion.span key={`msg-${lang}`} {...fadeProps} className={lang === "bn" ? "font-bn" : ""}>
+                {t.message}
+              </motion.span>
+            </AnimatePresence>
           </a>
           <a
             href={`tel:+91${phone10}`}
             data-testid="call-button"
-            className="flex items-center justify-center gap-2 rounded-full bg-[#FFD400] text-ink font-display font-bold min-h-[56px] px-4 hover:bg-[#E6BF00] transition-colors"
+            style={{ backgroundColor: "#FFD400" }}
+            className="flex items-center justify-center gap-2 rounded-full border-[3px] border-black text-black font-display font-black min-h-[58px] px-4 shadow-[5px_5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[2px_2px_0_0_#000] transition-all duration-150"
           >
-            <Phone className="w-4 h-4" strokeWidth={2.4} />
-            Private call
+            <Phone className="w-5 h-5" strokeWidth={2.6} />
+            <AnimatePresence mode="wait">
+              <motion.span key={`call-${lang}`} {...fadeProps} className={lang === "bn" ? "font-bn" : ""}>
+                {t.call}
+              </motion.span>
+            </AnimatePresence>
           </a>
         </div>
 
-        <p
-          className="mt-3 text-center text-xs text-ink-muted leading-snug"
-          data-testid="spam-notice"
-        >
-          Spam may get your IP and number blocked for up to 6 months.
-        </p>
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={`spam-${lang}`}
+            {...fadeProps}
+            className={`mt-3 text-center text-xs text-black/70 leading-snug font-semibold ${
+              lang === "bn" ? "font-bn" : ""
+            }`}
+            data-testid="spam-notice"
+          >
+            {t.spam}
+          </motion.p>
+        </AnimatePresence>
 
+        {/* Emergency */}
         <a
           href="tel:112"
           data-testid="emergency-button"
-          className="mt-6 flex items-center justify-center gap-2 rounded-full border border-red-300 bg-red-50/60 text-red-700 font-display font-bold min-h-[52px] hover:bg-red-100 transition-colors"
+          style={{ backgroundColor: "#FF3B3B" }}
+          className="mt-6 flex items-center justify-center gap-2 rounded-full border-[3px] border-black text-white font-display font-black min-h-[56px] shadow-[5px_5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[2px_2px_0_0_#000] transition-all duration-150"
         >
-          <Ambulance className="w-4 h-4" strokeWidth={2.4} />
-          Emergency
+          <Ambulance className="w-5 h-5" strokeWidth={2.6} />
+          <AnimatePresence mode="wait">
+            <motion.span key={`em-${lang}`} {...fadeProps} className={`uppercase ${lang === "bn" ? "font-bn normal-case" : ""}`}>
+              {t.emergency}
+            </motion.span>
+          </AnimatePresence>
+          <span className="ml-1 font-mono text-xs bg-black/30 px-2 py-0.5 rounded-full">112</span>
         </a>
 
-        <div className="mt-5 flex items-start gap-2.5 text-[12px] text-ink-muted">
-          <ShieldCheck className="w-4 h-4 mt-0.5 text-teal shrink-0" strokeWidth={2.2} />
-          <p className="leading-snug">
-            Owner's number stays private. No account or app needed.
-            <span className="block font-bn text-[12px] mt-0.5">
-              মালিকের নম্বর গোপন থাকে। কোনো অ্যাপ বা অ্যাকাউন্ট লাগবে না।
-            </span>
-          </p>
+        {/* Trust line */}
+        <div className="mt-5 flex items-start gap-2.5 bg-white/60 border-[2px] border-black/80 rounded-2xl px-3.5 py-2.5">
+          <ShieldCheck className="w-4 h-4 mt-0.5 text-[#0F6E56] shrink-0" strokeWidth={2.6} />
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={`priv-${lang}`}
+              {...fadeProps}
+              className={`text-[12px] leading-snug text-black font-semibold ${
+                lang === "bn" ? "font-bn" : ""
+              }`}
+            >
+              {t.priv}
+            </motion.p>
+          </AnimatePresence>
         </div>
 
-        <PublicFooter tagId={id} />
+        <footer className="mt-8 text-center text-[11px] text-black/70 font-display font-bold">
+          NECIRCLE · CONNECTING THE NORTHEAST · #{id}
+        </footer>
       </div>
     </div>
   );
