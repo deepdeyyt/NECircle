@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { api, formatApiError } from "../lib/api";
 
 const INDIAN_PHONE = /^(?:\+91[\s-]?|0)?[6-9]\d{9}$/;
+const PINCODE_RE = /^\d{6}$/;
 
 export default function BuyModal({ open, onOpenChange }) {
   const [config, setConfig] = useState(null);
@@ -22,6 +23,7 @@ export default function BuyModal({ open, onOpenChange }) {
     customer_name: "",
     customer_phone: "",
     address: "",
+    pincode: "",
     quantity: 1,
   });
   const [errors, setErrors] = useState({});
@@ -44,8 +46,22 @@ export default function BuyModal({ open, onOpenChange }) {
     setErrors((e) => ({ ...e, [k]: undefined }));
   };
 
-  const total = () =>
-    config ? (config.price_paise * form.quantity) / 100 : 0;
+  const shippingPaise = () => {
+    if (!config) return 0;
+    const p = (form.pincode || "").trim();
+    if (!PINCODE_RE.test(p)) return null; // unknown
+    return p.startsWith("799")
+      ? config.shipping_tripura_paise
+      : config.shipping_other_paise;
+  };
+
+  const itemPaise = () => (config ? config.price_paise * form.quantity : 0);
+
+  const totalRupees = () => {
+    const item = itemPaise();
+    const ship = shippingPaise();
+    return ((item + (ship ?? 0)) / 100).toFixed(0);
+  };
 
   const validate = () => {
     const e = {};
@@ -54,6 +70,8 @@ export default function BuyModal({ open, onOpenChange }) {
     else if (!INDIAN_PHONE.test(form.customer_phone.trim()))
       e.customer_phone = "Enter a valid Indian mobile number";
     if (form.address.trim().length < 8) e.address = "Enter a full shipping address";
+    if (!PINCODE_RE.test(form.pincode.trim()))
+      e.pincode = "Enter your 6-digit PIN code";
     if (form.quantity < 1 || form.quantity > 20) e.quantity = "1–20 only";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -67,6 +85,7 @@ export default function BuyModal({ open, onOpenChange }) {
         customer_name: form.customer_name.trim(),
         customer_phone: form.customer_phone.trim(),
         address: form.address.trim(),
+        pincode: form.pincode.trim(),
         quantity: Number(form.quantity),
       });
 
@@ -202,12 +221,40 @@ export default function BuyModal({ open, onOpenChange }) {
                   data-testid="buy-address"
                   value={form.address}
                   onChange={(e) => setField("address", e.target.value)}
-                  placeholder="House, street, city, PIN"
+                  placeholder="House, street, city"
                   rows={3}
                   className="mt-1.5 rounded-xl border-black/10 focus-visible:ring-2 focus-visible:ring-clay focus-visible:border-transparent"
                 />
                 {errors.address && (
                   <p className="text-xs text-red-600 mt-1">{errors.address}</p>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-ink font-semibold">PIN code</Label>
+                <Input
+                  data-testid="buy-pincode"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={form.pincode}
+                  onChange={(e) =>
+                    setField("pincode", e.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="e.g. 799001"
+                  className="mt-1.5 rounded-xl border-black/10 focus-visible:ring-2 focus-visible:ring-clay focus-visible:border-transparent font-mono tracking-wider"
+                />
+                {errors.pincode ? (
+                  <p className="text-xs text-red-600 mt-1">{errors.pincode}</p>
+                ) : PINCODE_RE.test(form.pincode) ? (
+                  <p className="mt-1 text-[11px] text-ink-muted font-semibold">
+                    {form.pincode.startsWith("799")
+                      ? "Tripura shipping — ₹21"
+                      : "Outside Tripura — ₹80"}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[11px] text-ink-muted">
+                    Tripura (starts with 799) — ₹21 · Rest of India — ₹80
+                  </p>
                 )}
               </div>
 
@@ -230,10 +277,41 @@ export default function BuyModal({ open, onOpenChange }) {
                     className="font-display font-extrabold text-2xl text-ink tabular-nums"
                     data-testid="buy-total"
                   >
-                    ₹{total().toFixed(0)}
+                    ₹{totalRupees()}
                   </div>
                 </div>
               </div>
+
+              {config && (
+                <div
+                  className="text-xs text-ink-muted bg-white border border-black/10 rounded-xl px-3 py-2 space-y-1"
+                  data-testid="buy-breakdown"
+                >
+                  <div className="flex justify-between">
+                    <span>
+                      Item · ₹{config.price_paise / 100} × {form.quantity}
+                    </span>
+                    <span className="font-mono">₹{itemPaise() / 100}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>
+                      Shipping{" "}
+                      {PINCODE_RE.test(form.pincode)
+                        ? form.pincode.startsWith("799")
+                          ? "(Tripura)"
+                          : "(outside Tripura)"
+                        : "(enter PIN)"}
+                    </span>
+                    <span className="font-mono">
+                      {shippingPaise() == null ? "—" : `₹${shippingPaise() / 100}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-black text-ink pt-1 border-t border-black/10">
+                    <span>Total</span>
+                    <span className="font-mono">₹{totalRupees()}</span>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-start gap-2 text-[12px] text-ink-muted bg-white border border-black/10 rounded-xl px-3 py-2">
                 <Package className="w-4 h-4 mt-0.5 text-clay shrink-0" strokeWidth={2.2} />
@@ -253,7 +331,7 @@ export default function BuyModal({ open, onOpenChange }) {
                     <Loader2 className="w-4 h-4 animate-spin mr-2" /> Opening Razorpay…
                   </>
                 ) : (
-                  <>Pay ₹{total().toFixed(0)} with Razorpay</>
+                  <>Pay ₹{totalRupees()} with Razorpay</>
                 )}
               </Button>
 

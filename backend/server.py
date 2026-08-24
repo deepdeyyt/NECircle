@@ -44,7 +44,17 @@ RAZORPAY_KEY_ID = os.environ["RAZORPAY_KEY_ID"]
 RAZORPAY_KEY_SECRET = os.environ["RAZORPAY_KEY_SECRET"]
 RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
 ORDER_PRICE_PAISE = int(os.environ.get("ORDER_PRICE_PAISE", "9900"))
+SHIPPING_TRIPURA_PAISE = int(os.environ.get("SHIPPING_TRIPURA_PAISE", "2100"))  # ₹21
+SHIPPING_OTHER_PAISE = int(os.environ.get("SHIPPING_OTHER_PAISE", "8000"))  # ₹80
 TAGS_PER_ORDER = 1  # one QR/id per ₹99 order — printed in 3 languages
+
+
+def shipping_for_pincode(pincode: str) -> int:
+    """Return shipping cost in paise for the given Indian pincode."""
+    p = (pincode or "").strip()
+    if p.startswith("799") and len(p) == 6 and p.isdigit():
+        return SHIPPING_TRIPURA_PAISE
+    return SHIPPING_OTHER_PAISE
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
@@ -194,6 +204,7 @@ class CreateOrderIn(BaseModel):
     customer_name: str = Field(min_length=1, max_length=80)
     customer_phone: str
     address: str = Field(min_length=6, max_length=400)
+    pincode: str = Field(min_length=6, max_length=6)
     quantity: int = Field(ge=1, le=20, default=1)
 
     @field_validator("customer_phone")
@@ -203,6 +214,14 @@ class CreateOrderIn(BaseModel):
         if not n:
             raise ValueError("Enter a valid Indian phone number")
         return n
+
+    @field_validator("pincode")
+    @classmethod
+    def _pin(cls, v: str) -> str:
+        v = re.sub(r"\D", "", v or "")
+        if len(v) != 6:
+            raise ValueError("Enter a valid 6-digit PIN code")
+        return v
 
 
 class VerifyPaymentIn(BaseModel):
@@ -436,6 +455,8 @@ async def order_config():
         "razorpay_key_id": RAZORPAY_KEY_ID,
         "price_paise": ORDER_PRICE_PAISE,
         "price_display": f"₹{ORDER_PRICE_PAISE / 100:.0f}",
+        "shipping_tripura_paise": SHIPPING_TRIPURA_PAISE,
+        "shipping_other_paise": SHIPPING_OTHER_PAISE,
         "tags_per_order": 3,
         "currency": "INR",
     }
@@ -443,7 +464,9 @@ async def order_config():
 
 @api.post("/orders/create")
 async def create_order(body: CreateOrderIn):
-    amount_paise = ORDER_PRICE_PAISE * body.quantity
+    item_paise = ORDER_PRICE_PAISE * body.quantity
+    shipping_paise = shipping_for_pincode(body.pincode)
+    amount_paise = item_paise + shipping_paise
     order_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
@@ -453,7 +476,10 @@ async def create_order(body: CreateOrderIn):
             "customer_name": body.customer_name.strip(),
             "customer_phone": body.customer_phone,
             "address": body.address.strip(),
+            "pincode": body.pincode,
             "quantity": body.quantity,
+            "item_paise": item_paise,
+            "shipping_paise": shipping_paise,
             "amount_paise": amount_paise,
             "status": "pending",
             "created_at": now,
@@ -470,6 +496,7 @@ async def create_order(body: CreateOrderIn):
                 "notes": {
                     "customer_name": body.customer_name,
                     "customer_phone": body.customer_phone,
+                    "pincode": body.pincode,
                     "order_id": order_id,
                 },
             }
@@ -486,6 +513,8 @@ async def create_order(body: CreateOrderIn):
         "order_id": order_id,
         "razorpay_order_id": rz_order["id"],
         "amount_paise": amount_paise,
+        "item_paise": item_paise,
+        "shipping_paise": shipping_paise,
         "currency": "INR",
         "razorpay_key_id": RAZORPAY_KEY_ID,
         "customer": {"name": body.customer_name, "phone": body.customer_phone},
