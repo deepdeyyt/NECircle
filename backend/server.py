@@ -172,6 +172,7 @@ class ClaimIn(BaseModel):
     type: Literal["vehicle", "business"]
     note: Optional[str] = Field(default=None, max_length=280)
     vehicle_number: Optional[str] = Field(default=None, max_length=20)
+    emergency_contact: Optional[str] = Field(default=None, max_length=20)
 
     @field_validator("name")
     @classmethod
@@ -198,6 +199,20 @@ class ClaimIn(BaseModel):
         if not n:
             raise ValueError("Enter a valid Tripura plate (e.g. TR-01-A-1234)")
         return n
+
+    @field_validator("emergency_contact")
+    @classmethod
+    def _emerg(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or not v.strip():
+            return None
+        n = normalize_phone(v)
+        if not n:
+            raise ValueError("Enter a valid Indian emergency contact number")
+        return n
+
+
+class DeleteTagsIn(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=1000)
 
 
 class CreateOrderIn(BaseModel):
@@ -315,6 +330,8 @@ async def claim_tag(tag_id: str, body: ClaimIn):
         raise HTTPException(status_code=409, detail="Tag already activated")
     if body.type == "vehicle" and not body.vehicle_number:
         raise HTTPException(status_code=422, detail="Vehicle number is required")
+    if body.type == "vehicle" and not body.emergency_contact:
+        raise HTTPException(status_code=422, detail="Emergency contact is required")
 
     profile = {
         "name": body.name,
@@ -322,6 +339,7 @@ async def claim_tag(tag_id: str, body: ClaimIn):
         "type": body.type,
         "note": (body.note or "").strip() if body.type == "business" else None,
         "vehicle_number": body.vehicle_number if body.type == "vehicle" else None,
+        "emergency_contact": body.emergency_contact if body.type == "vehicle" else None,
         "claimed_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.tags.update_one(
@@ -384,6 +402,16 @@ async def create_batch(body: BatchIn, _: dict = Depends(require_admin)):
         "from": new_docs[0]["id"] if new_docs else None,
         "to": new_docs[-1]["id"] if new_docs else None,
     }
+
+
+@api.post("/admin/tags/delete")
+async def delete_tags(body: DeleteTagsIn, _: dict = Depends(require_admin)):
+    """Bulk-delete unassigned tags only. Active tags are protected."""
+    res = await db.tags.delete_many(
+        {"id": {"$in": body.ids}, "status": "unassigned"}
+    )
+    skipped = len(body.ids) - res.deleted_count
+    return {"deleted": res.deleted_count, "skipped_active": skipped}
 
 
 def _public_base_url(request: Request) -> str:

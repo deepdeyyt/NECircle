@@ -306,25 +306,31 @@ function VehicleClaimedView({ tag }) {
         </AnimatePresence>
 
         {/* Emergency */}
-        <a
-          href="tel:112"
-          data-testid="emergency-button"
-          className="mt-6 flex items-center justify-center gap-2 rounded-full border-[3px] border-black bg-red-500 text-white font-display font-black min-h-[56px] shadow-[5px_5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[2px_2px_0_0_#000] transition-all duration-150"
-        >
-          <Ambulance className="w-5 h-5" strokeWidth={2.6} />
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={`em-${lang}`}
-              {...fadeProps}
-              className={`uppercase ${lang === "bn" ? "font-bn normal-case" : ""}`}
+        <div className="mt-6 grid grid-cols-2 gap-3" data-testid="emergency-row">
+          {profile.emergency_contact && (
+            <a
+              href={`tel:+91${last10(profile.emergency_contact)}`}
+              data-testid="emergency-family-button"
+              className="flex items-center justify-center gap-2 rounded-full border-[3px] border-black bg-white text-black font-display font-black min-h-[56px] px-3 shadow-[5px_5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[2px_2px_0_0_#000] transition-all duration-150"
             >
-              {t.emergency}
-            </motion.span>
-          </AnimatePresence>
-          <span className="ml-1 font-mono text-xs bg-black/30 px-2 py-0.5 rounded-full">
-            112
-          </span>
-        </a>
+              <ShieldCheck className="w-5 h-5 text-[#0F6E56]" strokeWidth={2.6} />
+              Family
+            </a>
+          )}
+          <a
+            href="tel:100"
+            data-testid="emergency-button"
+            className={`flex items-center justify-center gap-2 rounded-full border-[3px] border-black bg-red-500 text-white font-display font-black min-h-[56px] shadow-[5px_5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[2px_2px_0_0_#000] transition-all duration-150 ${
+              profile.emergency_contact ? "" : "col-span-2"
+            }`}
+          >
+            <Ambulance className="w-5 h-5" strokeWidth={2.6} />
+            Police
+            <span className="ml-1 font-mono text-xs bg-black/30 px-2 py-0.5 rounded-full">
+              100
+            </span>
+          </a>
+        </div>
 
         {/* Trust line */}
         <div className="mt-5 flex items-start gap-2.5 bg-white/10 border-[2px] border-white/25 rounded-2xl px-3.5 py-2.5 backdrop-blur-sm">
@@ -428,6 +434,7 @@ function ClaimView({ tag, onClaimed }) {
     type: "vehicle",
     note: "",
     vehicle_number: "",
+    emergency_contact: "",
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -450,6 +457,10 @@ function ClaimView({ tag, onClaimed }) {
       if (!p) e.vehicle_number = "Enter your Tripura vehicle number";
       else if (!PLATE_RE.test(p))
         e.vehicle_number = "Format: TR + 2 digits + 1–3 letters + digits (e.g. TR01A1234)";
+      if (!form.emergency_contact.trim())
+        e.emergency_contact = "Enter a family emergency contact number";
+      else if (!INDIAN_PHONE.test(form.emergency_contact.trim()))
+        e.emergency_contact = "Enter a valid 10-digit Indian number";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -468,6 +479,8 @@ function ClaimView({ tag, onClaimed }) {
         note: form.type === "business" ? form.note.trim() : undefined,
         vehicle_number:
           form.type === "vehicle" ? stripPlate(form.vehicle_number) : undefined,
+        emergency_contact:
+          form.type === "vehicle" ? form.emergency_contact.trim() : undefined,
       };
       const { data } = await api.post(`/tags/${tag.id}/claim`, payload);
       onClaimed(data);
@@ -609,6 +622,34 @@ function ClaimView({ tag, onClaimed }) {
               {errors.vehicle_number && (
                 <p className="mt-1.5 text-xs text-red-600 font-semibold" data-testid="plate-error">
                   {errors.vehicle_number}
+                </p>
+              )}
+            </div>
+          )}
+
+          {form.type === "vehicle" && (
+            <div>
+              <Label htmlFor="emergency" className="text-[#1a1a1a] font-bold">
+                Family emergency contact <span className="text-royal">*</span>
+              </Label>
+              <p className="text-xs text-[#5C564F] font-bn mt-0.5">
+                পরিবারের জরুরি যোগাযোগের নম্বর
+              </p>
+              <Input
+                id="emergency"
+                data-testid="emergency-input"
+                inputMode="tel"
+                value={form.emergency_contact}
+                onChange={(e) => setField("emergency_contact", e.target.value)}
+                placeholder="e.g. 98765 43210"
+                className="mt-2 rounded-xl border-[2px] border-[#1a1a1a] text-[#1a1a1a] focus-visible:ring-2 focus-visible:ring-royal focus-visible:border-transparent"
+              />
+              <p className="mt-1 text-[11px] text-[#5C564F]">
+                Shown as a "Call family" button on the scan page for real emergencies.
+              </p>
+              {errors.emergency_contact && (
+                <p className="mt-1.5 text-xs text-red-600 font-semibold" data-testid="emergency-error">
+                  {errors.emergency_contact}
                 </p>
               )}
             </div>

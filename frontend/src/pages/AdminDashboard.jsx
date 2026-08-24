@@ -10,6 +10,9 @@ import {
   Boxes,
   ShoppingBag,
   ChevronDown,
+  Trash2,
+  Square,
+  CheckSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, BACKEND_URL, formatApiError } from "../lib/api";
@@ -40,22 +43,49 @@ function StatCard({ label, value, testid, icon: Icon, tint = "#FDDD0E" }) {
   );
 }
 
-function TagCard({ tag }) {
+function TagCard({ tag, selected, onToggle, selectionMode }) {
   const isActive = tag.status === "active";
   const publicUrl = `${window.location.origin}/p/${tag.id}`;
+
+  const handleClick = (e) => {
+    if (selectionMode && !isActive) {
+      e.preventDefault();
+      onToggle(tag.id);
+    }
+  };
+
   return (
     <a
       href={publicUrl}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={handleClick}
       data-testid={`tag-card-${tag.id}`}
-      className={`rounded-xl border-[2.5px] border-[#1a1a1a] p-3.5 hover-lift shadow-[3px_3px_0_0_#1a1a1a] flex flex-col gap-1 group ${
-        isActive ? "bg-neon text-[#1a1a1a]" : "bg-white text-[#1a1a1a]"
+      className={`relative rounded-xl border-[2.5px] p-3.5 hover-lift shadow-[3px_3px_0_0_#1a1a1a] flex flex-col gap-1 group ${
+        selected
+          ? "border-royal bg-neon text-[#1a1a1a] ring-2 ring-white"
+          : isActive
+          ? "border-[#1a1a1a] bg-neon text-[#1a1a1a]"
+          : "border-[#1a1a1a] bg-white text-[#1a1a1a]"
       }`}
     >
+      {selectionMode && !isActive && (
+        <span
+          className="absolute top-1.5 right-1.5 w-5 h-5 rounded-md border-[2px] border-[#1a1a1a] bg-white flex items-center justify-center"
+          data-testid={`tag-check-${tag.id}`}
+        >
+          {selected ? (
+            <CheckSquare className="w-3.5 h-3.5 text-royal" strokeWidth={3} />
+          ) : (
+            <Square className="w-3.5 h-3.5 text-transparent" strokeWidth={2.4} />
+          )}
+        </span>
+      )}
       <div className="flex items-center justify-between">
         <span className="font-mono text-xs font-black">#{tag.id}</span>
-        <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+        {!selectionMode && (
+          <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+        )}
       </div>
       {isActive ? (
         <div className="flex items-center gap-1.5 font-black text-sm truncate">
@@ -84,6 +114,9 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [inventoryOpen, setInventoryOpen] = useState(true);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -162,6 +195,49 @@ export default function AdminDashboard() {
       ? t.status === "active"
       : t.status === "unassigned",
   );
+
+  const toggleSelectionMode = () => {
+    setSelectionMode((v) => !v);
+    setSelected(new Set());
+  };
+
+  const toggleOne = (id) => {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllUnassigned = () => {
+    setSelected(new Set(filtered.filter((t) => t.status === "unassigned").map((t) => t.id)));
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const deleteSelected = async () => {
+    if (selected.size === 0) return;
+    if (!window.confirm(`Delete ${selected.size} unassigned tag${selected.size > 1 ? "s" : ""}? Activated tags will be skipped.`)) return;
+    setDeleting(true);
+    try {
+      const { data } = await api.post("/admin/tags/delete", {
+        ids: Array.from(selected),
+      });
+      toast.success(
+        `Deleted ${data.deleted} tag${data.deleted === 1 ? "" : "s"}${
+          data.skipped_active ? ` · ${data.skipped_active} skipped (active)` : ""
+        }`,
+      );
+      setSelected(new Set());
+      setSelectionMode(false);
+      await load();
+    } catch (err) {
+      toast.error(formatApiError(err.response?.data?.detail, "Delete failed"));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-royal text-white">
@@ -331,6 +407,55 @@ export default function AdminDashboard() {
                 Inventory ({filtered.length})
               </h2>
             </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {selectionMode && (
+                <>
+                  <span
+                    className="text-xs text-white/80 font-black"
+                    data-testid="selection-count"
+                  >
+                    {selected.size} selected
+                  </span>
+                  <button
+                    onClick={selectAllUnassigned}
+                    data-testid="select-all-unassigned"
+                    className="text-xs font-black text-white/90 hover:text-neon px-2.5 py-1"
+                  >
+                    Select all unclaimed
+                  </button>
+                  <button
+                    onClick={clearSelection}
+                    data-testid="clear-selection"
+                    className="text-xs font-black text-white/70 hover:text-white px-2.5 py-1"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={deleteSelected}
+                    disabled={deleting || selected.size === 0}
+                    data-testid="delete-selected-button"
+                    className="rounded-full border-[2.5px] border-[#1a1a1a] bg-red-500 text-white font-display font-black text-xs px-3.5 py-1.5 inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {deleting ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" strokeWidth={2.6} />
+                    )}
+                    Delete ({selected.size})
+                  </button>
+                </>
+              )}
+              <button
+                onClick={toggleSelectionMode}
+                data-testid="toggle-selection"
+                className={`text-xs font-black rounded-full border-[2.5px] px-3.5 py-1.5 transition-colors ${
+                  selectionMode
+                    ? "border-white bg-white text-royal"
+                    : "border-white text-white hover:bg-white hover:text-royal"
+                }`}
+              >
+                {selectionMode ? "Done" : "Select"}
+              </button>
             <div
               className="inline-flex rounded-full border-[2.5px] border-white bg-royal-soft/40 p-1"
               data-testid="inventory-filter"
@@ -353,6 +478,7 @@ export default function AdminDashboard() {
                   {opt.label}
                 </button>
               ))}
+            </div>
             </div>
           </div>
 
@@ -382,7 +508,13 @@ export default function AdminDashboard() {
                   data-testid="tag-grid"
                 >
                   {filtered.map((t) => (
-                    <TagCard key={t.id} tag={t} />
+                    <TagCard
+                      key={t.id}
+                      tag={t}
+                      selected={selected.has(t.id)}
+                      onToggle={toggleOne}
+                      selectionMode={selectionMode}
+                    />
                   ))}
                 </div>
               )}
