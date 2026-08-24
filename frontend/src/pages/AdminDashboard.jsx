@@ -15,6 +15,7 @@ import { api, BACKEND_URL, formatApiError } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { BrandMark } from "../components/BrandMark";
 import { Input } from "../components/ui/input";
+import OrdersPanel from "./OrdersPanel";
 
 function StatCard({ label, value, testid, icon: Icon, tint = "#FDDD0E" }) {
   return (
@@ -196,7 +197,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-5">
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-4">
           <StatCard
             label="Printed"
             value={stats.printed}
@@ -224,6 +225,13 @@ export default function AdminDashboard() {
             testid="stat-orders"
             icon={ShoppingBag}
             tint="#FF9F5A"
+          />
+          <StatCard
+            label="To ship"
+            value={stats.orders_to_ship ?? 0}
+            testid="stat-to-ship"
+            icon={ShoppingBag}
+            tint="#FF6B9E"
           />
         </div>
 
@@ -352,6 +360,8 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+
+        <OrdersPanel onChanged={load} />
       </main>
     </div>
   );

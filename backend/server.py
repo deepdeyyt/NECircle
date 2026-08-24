@@ -316,12 +316,16 @@ async def stats(_: dict = Depends(require_admin)):
     printed = await db.tags.count_documents({})
     activated = await db.tags.count_documents({"status": "active"})
     unassigned = await db.tags.count_documents({"status": "unassigned"})
-    orders_paid = await db.orders.count_documents({"status": "paid"})
+    orders_paid = await db.orders.count_documents(
+        {"status": {"$in": ["paid", "shipped"]}}
+    )
+    orders_to_ship = await db.orders.count_documents({"status": "paid"})
     return {
         "printed": printed,
         "activated": activated,
         "unassigned": unassigned,
         "orders_paid": orders_paid,
+        "orders_to_ship": orders_to_ship,
     }
 
 
@@ -546,11 +550,35 @@ async def verify_payment(body: VerifyPaymentIn):
 @api.get("/admin/orders")
 async def list_orders(_: dict = Depends(require_admin)):
     docs = (
-        await db.orders.find({}, {"_id": 0})
+        await db.orders.find(
+            {},
+            {
+                "_id": 0,
+                "razorpay_signature": 0,
+                "razorpay_payment_id": 0,
+            },
+        )
         .sort("created_at", -1)
         .to_list(length=500)
     )
     return docs
+
+
+@api.post("/admin/orders/{order_id}/ship")
+async def mark_shipped(order_id: str, _: dict = Depends(require_admin)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.get("status") != "paid" and order.get("status") != "shipped":
+        raise HTTPException(status_code=400, detail="Only paid orders can be shipped")
+    new_status = "paid" if order.get("status") == "shipped" else "shipped"
+    update = {"status": new_status}
+    if new_status == "shipped":
+        update["shipped_at"] = datetime.now(timezone.utc).isoformat()
+    else:
+        update["shipped_at"] = None
+    await db.orders.update_one({"id": order_id}, {"$set": update})
+    return {"ok": True, "status": new_status}
 
 
 # ------------------------------------------------------------
