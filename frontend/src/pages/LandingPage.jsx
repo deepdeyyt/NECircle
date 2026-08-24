@@ -505,10 +505,15 @@ export default function LandingPage() {
       <footer className="relative z-10 border-t border-white/15">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 flex flex-wrap items-center justify-between gap-4 text-xs text-white/70">
           <span>© NECircle · Built in Tripura</span>
-          <span className="font-bn">উত্তর-পূর্বকে যুক্ত করছে</span>
-          <Link to="/admin" data-testid="footer-admin" className="hover:text-neon">
-            Operator sign-in
-          </Link>
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-2" data-testid="footer-legal">
+            <Link to="/legal/privacy" className="hover:text-neon">Privacy</Link>
+            <Link to="/legal/terms" className="hover:text-neon">Terms</Link>
+            <Link to="/legal/refunds" className="hover:text-neon">Refunds</Link>
+            <Link to="/legal/shipping" className="hover:text-neon">Shipping</Link>
+            <Link to="/admin" data-testid="footer-admin" className="hover:text-neon">
+              Operator
+            </Link>
+          </nav>
         </div>
       </footer>
 
