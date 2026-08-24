@@ -99,6 +99,21 @@ def normalize_phone(raw: str) -> Optional[str]:
     return m.group(1)
 
 
+# Tripura plate: TR + 2 digits (district) + 1-3 letters (series) + 1-4 digits (number)
+PLATE_RE = re.compile(r"^TR(\d{2})([A-Z]{1,3})(\d{1,4})$")
+
+
+def normalize_plate(raw: str) -> Optional[str]:
+    """Return canonical 'TR-01-A-1234' or None if invalid."""
+    if not raw:
+        return None
+    cleaned = re.sub(r"[^A-Za-z0-9]", "", raw).upper()
+    m = PLATE_RE.match(cleaned)
+    if not m:
+        return None
+    return f"TR-{m.group(1)}-{m.group(2)}-{m.group(3)}"
+
+
 def next_id_from(max_id: Optional[str]) -> int:
     if not max_id:
         return 1
@@ -129,6 +144,7 @@ class ClaimIn(BaseModel):
     phone: str
     type: Literal["vehicle", "business"]
     note: Optional[str] = Field(default=None, max_length=280)
+    vehicle_number: Optional[str] = Field(default=None, max_length=20)
 
     @field_validator("name")
     @classmethod
@@ -144,6 +160,16 @@ class ClaimIn(BaseModel):
         norm = normalize_phone(v)
         if not norm:
             raise ValueError("Enter a valid Indian phone number")
+        return norm
+
+    @field_validator("vehicle_number")
+    @classmethod
+    def _plate(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or not v.strip():
+            return None
+        norm = normalize_plate(v)
+        if not norm:
+            raise ValueError("Enter a valid Tripura plate (e.g. TR-01-A-1234)")
         return norm
 
 
@@ -240,11 +266,15 @@ async def claim_tag(tag_id: str, body: ClaimIn):
     if doc.get("status") == "active":
         raise HTTPException(status_code=409, detail="Tag already activated")
 
+    if body.type == "vehicle" and not body.vehicle_number:
+        raise HTTPException(status_code=422, detail="Vehicle number is required")
+
     profile = {
         "name": body.name,
         "phone": body.phone,  # already normalized to 10-digit
         "type": body.type,
         "note": (body.note or "").strip() if body.type == "business" else None,
+        "vehicle_number": body.vehicle_number if body.type == "vehicle" else None,
         "claimed_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.tags.update_one(
