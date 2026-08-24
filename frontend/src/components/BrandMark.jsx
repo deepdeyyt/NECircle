@@ -1,20 +1,23 @@
 import { Link } from "react-router-dom";
 
-export function BrandMark({ to = "/", className = "", subtitle = true }) {
+/**
+ * NECircle brand mark — the yellow logo tile.
+ * The tagline "Connecting the Northeast..." is baked into the artwork itself.
+ */
+export function BrandMark({ to = "/", className = "", size = 44 }) {
   return (
     <Link
       to={to}
       data-testid="brand-mark"
-      className={`inline-flex items-baseline gap-2 group ${className}`}
+      className={`inline-flex items-center group ${className}`}
     >
-      <span className="font-display text-2xl font-extrabold tracking-tight text-white">
-        NE<span className="text-neon">Circle</span>
-      </span>
-      {subtitle && (
-        <span className="hidden sm:inline text-xs text-white/70 font-body">
-          Connecting the Northeast
-        </span>
-      )}
+      <img
+        src="/necircle-logo.png"
+        alt="NECircle · Connecting the Northeast"
+        style={{ height: size, width: "auto" }}
+        className="block select-none transition-transform group-hover:-rotate-1 group-hover:scale-[1.03]"
+        draggable="false"
+      />
     </Link>
   );
 }

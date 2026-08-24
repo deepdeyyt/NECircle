@@ -54,7 +54,7 @@ function PublicFooter({ tagId }) {
 function IndianPlate({ number }) {
   return (
     <div
-      className="inline-flex flex-col rounded-lg overflow-hidden border-[3px] border-black bg-white shadow-[6px_6px_0_0_#000]"
+      className="inline-flex flex-col rounded-lg overflow-hidden border-[3px] border-black bg-white shadow-[5px_5px_0_0_#000]"
       data-testid="plate-display"
     >
       <div className="bg-[#0F1E5B] text-white text-[10px] font-display font-black tracking-[0.35em] text-center py-1 px-8 border-b-[3px] border-black">
@@ -76,18 +76,18 @@ function IndianPlate({ number }) {
   );
 }
 
-/* ---------------- Reason card (brutalist) ---------------- */
+/* ---------------- Reason card (brutalist on purple) ---------------- */
 const REASONS_META = [
-  { id: "lights", icon: Sun, tint: "#FFE44D" },
-  { id: "no_parking", icon: ParkingCircle, tint: "#7CE4FF" },
-  { id: "towed", icon: Truck, tint: "#FF9F5A" },
-  { id: "open", icon: Maximize2, tint: "#B6F09C" },
-  { id: "wrong", icon: Siren, tint: "#FF6B9E" },
+  { id: "lights", icon: Sun },
+  { id: "no_parking", icon: ParkingCircle },
+  { id: "towed", icon: Truck },
+  { id: "open", icon: Maximize2 },
+  { id: "wrong", icon: Siren },
 ];
 
 function ReasonList({ selected, onSelect, t }) {
   return (
-    <div className="mt-4 space-y-3" data-testid="reason-list">
+    <div className="mt-4 space-y-2.5" data-testid="reason-list">
       {REASONS_META.map((r) => {
         const active = selected === r.id;
         return (
@@ -96,27 +96,24 @@ function ReasonList({ selected, onSelect, t }) {
             type="button"
             onClick={() => onSelect(active ? null : r.id)}
             data-testid={`reason-${r.id}`}
-            style={{ backgroundColor: active ? r.tint : "#ffffff" }}
-            className={`w-full flex items-center gap-3 rounded-2xl border-[3px] border-black px-4 py-3.5 text-left transition-all duration-150 ${
+            className={`w-full flex items-center gap-3 rounded-2xl border-[3px] border-black px-4 py-3 text-left transition-all duration-150 ${
               active
-                ? "shadow-[2px_2px_0_0_#000] translate-x-[2px] translate-y-[2px]"
-                : "shadow-[5px_5px_0_0_#000] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[6px_6px_0_0_#000]"
+                ? "bg-neon shadow-[2px_2px_0_0_#000] translate-x-[2px] translate-y-[2px]"
+                : "bg-white shadow-[4px_4px_0_0_#000] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[5px_5px_0_0_#000]"
             }`}
           >
-            <span
-              className="w-10 h-10 rounded-xl border-[2.5px] border-black flex items-center justify-center bg-white shrink-0"
-            >
-              <r.icon className="w-5 h-5 text-black" strokeWidth={2.5} />
+            <span className="w-9 h-9 rounded-xl border-[2.5px] border-black flex items-center justify-center bg-white shrink-0">
+              <r.icon className="w-4.5 h-4.5 text-black" strokeWidth={2.5} />
             </span>
-            <span className="flex-1 text-[15px] font-display font-bold text-black leading-snug">
+            <span className="flex-1 text-[14px] font-display font-bold text-black leading-snug">
               {t.reasons[r.id]}
             </span>
             <span
-              className={`w-6 h-6 rounded-full border-[2.5px] border-black shrink-0 flex items-center justify-center ${
+              className={`w-5 h-5 rounded-full border-[2.5px] border-black shrink-0 flex items-center justify-center ${
                 active ? "bg-black" : "bg-white"
               }`}
             >
-              {active && <span className="w-2 h-2 rounded-full bg-white" />}
+              {active && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
             </span>
           </button>
         );
@@ -138,10 +135,10 @@ function LangSwitcher({ value, onChange }) {
             onClick={() => onChange(l.code)}
             data-testid={`lang-${l.code}`}
             style={{ backgroundColor: active ? l.color : "#ffffff" }}
-            className={`px-3.5 py-1.5 rounded-full border-[2.5px] border-black font-display font-black text-xs uppercase tracking-wider transition-all duration-150 ${
+            className={`px-3.5 py-1.5 rounded-full border-[2.5px] border-black font-display font-black text-xs uppercase tracking-wider transition-all duration-150 text-black ${
               active
-                ? "shadow-[2px_2px_0_0_#000] translate-x-[1px] translate-y-[1px] text-black"
-                : "shadow-[3px_3px_0_0_#000] text-black hover:-translate-y-[1px]"
+                ? "shadow-[2px_2px_0_0_#000] translate-x-[1px] translate-y-[1px]"
+                : "shadow-[3px_3px_0_0_#000] hover:-translate-y-[1px]"
             } ${l.code === "bn" ? "font-bn" : ""}`}
           >
             {l.label}
@@ -152,7 +149,7 @@ function LangSwitcher({ value, onChange }) {
   );
 }
 
-/* ---------------- VEHICLE Claimed view (Neo-brutalist) ---------------- */
+/* ---------------- VEHICLE Claimed view (Royal + Neon) ---------------- */
 function VehicleClaimedView({ tag }) {
   const { profile, id } = tag;
   const phone10 = last10(profile.phone);
@@ -162,7 +159,9 @@ function VehicleClaimedView({ tag }) {
 
   const reasonText = () => (reason ? t.reasons[reason] : "");
   const plate = profile.vehicle_number || `tag #${id}`;
-  const waHref = `https://wa.me/91${phone10}?text=${encodeURIComponent(t.wa(plate, reasonText()))}`;
+  const waHref = `https://wa.me/91${phone10}?text=${encodeURIComponent(
+    t.wa(plate, reasonText()),
+  )}`;
 
   const fadeProps = {
     initial: { opacity: 0, y: 6 },
@@ -173,31 +172,28 @@ function VehicleClaimedView({ tag }) {
 
   return (
     <div
-      className="min-h-screen relative overflow-hidden"
-      style={{ backgroundColor: "#FFE44D" }}
+      className="min-h-screen bg-royal text-white relative overflow-hidden"
       data-testid="contact-page"
       data-tag-type="vehicle"
     >
-      {/* Decorative blobs */}
+      {/* Decorative background blobs */}
       <div
-        className="absolute -top-24 -left-20 w-64 h-64 rounded-full pointer-events-none"
-        style={{ backgroundColor: "#FF3B7F" }}
+        aria-hidden
+        className="absolute -top-24 -left-20 w-64 h-64 rounded-full opacity-40 pointer-events-none"
+        style={{ backgroundColor: "#5E3EAF" }}
       />
       <div
-        className="absolute bottom-24 -right-20 w-72 h-72 rounded-full pointer-events-none"
-        style={{ backgroundColor: "#7C4DFF" }}
+        aria-hidden
+        className="absolute bottom-24 -right-20 w-72 h-72 rounded-full opacity-30 pointer-events-none"
+        style={{ backgroundColor: "#FDDD0E" }}
       />
 
       <div className="max-w-md w-full mx-auto px-5 pt-5 pb-10 relative z-10">
         {/* Top bar */}
         <div className="flex items-center justify-between gap-2">
-          <div className="inline-flex items-baseline gap-2 bg-white border-[2.5px] border-black rounded-full pl-3 pr-4 py-1 shadow-[3px_3px_0_0_#000]">
-            <span className="font-display text-lg font-black text-black">
-              NE<span className="text-[#B5502F]">Circle</span>
-            </span>
-          </div>
+          <BrandMark size={36} />
           <span
-            className="font-mono text-[11px] font-bold bg-black text-white px-2.5 py-1 rounded-full"
+            className="font-mono text-[11px] font-black bg-black text-neon border-2 border-black px-2.5 py-1 rounded-full"
             data-testid="tag-id-chip"
           >
             #{id}
@@ -205,7 +201,7 @@ function VehicleClaimedView({ tag }) {
         </div>
 
         {/* Language switcher */}
-        <div className="mt-5">
+        <div className="mt-6">
           <LangSwitcher value={lang} onChange={setLang} />
         </div>
 
@@ -214,7 +210,7 @@ function VehicleClaimedView({ tag }) {
           <motion.h1
             key={`title-${lang}`}
             {...fadeProps}
-            className={`mt-6 font-display text-[34px] leading-[1.05] font-black text-black tracking-tight ${
+            className={`mt-6 font-display text-[36px] leading-[1.05] font-black text-white tracking-tight ${
               lang === "bn" ? "font-bn" : ""
             }`}
             data-testid="contact-heading"
@@ -224,7 +220,7 @@ function VehicleClaimedView({ tag }) {
         </AnimatePresence>
 
         {/* Plate card */}
-        <div className="mt-5 bg-white rounded-2xl border-[3px] border-black p-5 shadow-[6px_6px_0_0_#000]">
+        <div className="mt-5 bg-neon text-black rounded-2xl border-[3px] border-black p-5 shadow-[6px_6px_0_0_#000]">
           <IndianPlate number={profile.vehicle_number} />
           <AnimatePresence mode="wait">
             <motion.p
@@ -244,8 +240,8 @@ function VehicleClaimedView({ tag }) {
           <motion.h2
             key={`why-${lang}`}
             {...fadeProps}
-            className={`mt-8 font-display font-black text-black text-xl uppercase tracking-tight ${
-              lang === "bn" ? "font-bn text-lg" : ""
+            className={`mt-8 font-display font-black text-white text-xl uppercase tracking-tight ${
+              lang === "bn" ? "font-bn text-lg normal-case" : ""
             }`}
           >
             {t.why}
@@ -269,7 +265,11 @@ function VehicleClaimedView({ tag }) {
           >
             <MessageCircle className="w-5 h-5 text-[#0F6E56]" strokeWidth={2.6} />
             <AnimatePresence mode="wait">
-              <motion.span key={`msg-${lang}`} {...fadeProps} className={lang === "bn" ? "font-bn" : ""}>
+              <motion.span
+                key={`msg-${lang}`}
+                {...fadeProps}
+                className={lang === "bn" ? "font-bn" : ""}
+              >
                 {t.message}
               </motion.span>
             </AnimatePresence>
@@ -277,12 +277,15 @@ function VehicleClaimedView({ tag }) {
           <a
             href={`tel:+91${phone10}`}
             data-testid="call-button"
-            style={{ backgroundColor: "#FFD400" }}
-            className="flex items-center justify-center gap-2 rounded-full border-[3px] border-black text-black font-display font-black min-h-[58px] px-4 shadow-[5px_5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[2px_2px_0_0_#000] transition-all duration-150"
+            className="flex items-center justify-center gap-2 rounded-full border-[3px] border-black bg-neon text-black font-display font-black min-h-[58px] px-4 shadow-[5px_5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[2px_2px_0_0_#000] transition-all duration-150"
           >
             <Phone className="w-5 h-5" strokeWidth={2.6} />
             <AnimatePresence mode="wait">
-              <motion.span key={`call-${lang}`} {...fadeProps} className={lang === "bn" ? "font-bn" : ""}>
+              <motion.span
+                key={`call-${lang}`}
+                {...fadeProps}
+                className={lang === "bn" ? "font-bn" : ""}
+              >
                 {t.call}
               </motion.span>
             </AnimatePresence>
@@ -293,7 +296,7 @@ function VehicleClaimedView({ tag }) {
           <motion.p
             key={`spam-${lang}`}
             {...fadeProps}
-            className={`mt-3 text-center text-xs text-black/70 leading-snug font-semibold ${
+            className={`mt-3 text-center text-xs text-white/70 leading-snug font-semibold ${
               lang === "bn" ? "font-bn" : ""
             }`}
             data-testid="spam-notice"
@@ -306,26 +309,31 @@ function VehicleClaimedView({ tag }) {
         <a
           href="tel:112"
           data-testid="emergency-button"
-          style={{ backgroundColor: "#FF3B3B" }}
-          className="mt-6 flex items-center justify-center gap-2 rounded-full border-[3px] border-black text-white font-display font-black min-h-[56px] shadow-[5px_5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[2px_2px_0_0_#000] transition-all duration-150"
+          className="mt-6 flex items-center justify-center gap-2 rounded-full border-[3px] border-black bg-red-500 text-white font-display font-black min-h-[56px] shadow-[5px_5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-[2px_2px_0_0_#000] transition-all duration-150"
         >
           <Ambulance className="w-5 h-5" strokeWidth={2.6} />
           <AnimatePresence mode="wait">
-            <motion.span key={`em-${lang}`} {...fadeProps} className={`uppercase ${lang === "bn" ? "font-bn normal-case" : ""}`}>
+            <motion.span
+              key={`em-${lang}`}
+              {...fadeProps}
+              className={`uppercase ${lang === "bn" ? "font-bn normal-case" : ""}`}
+            >
               {t.emergency}
             </motion.span>
           </AnimatePresence>
-          <span className="ml-1 font-mono text-xs bg-black/30 px-2 py-0.5 rounded-full">112</span>
+          <span className="ml-1 font-mono text-xs bg-black/30 px-2 py-0.5 rounded-full">
+            112
+          </span>
         </a>
 
         {/* Trust line */}
-        <div className="mt-5 flex items-start gap-2.5 bg-white/60 border-[2px] border-black/80 rounded-2xl px-3.5 py-2.5">
-          <ShieldCheck className="w-4 h-4 mt-0.5 text-[#0F6E56] shrink-0" strokeWidth={2.6} />
+        <div className="mt-5 flex items-start gap-2.5 bg-white/10 border-[2px] border-white/25 rounded-2xl px-3.5 py-2.5 backdrop-blur-sm">
+          <ShieldCheck className="w-4 h-4 mt-0.5 text-neon shrink-0" strokeWidth={2.6} />
           <AnimatePresence mode="wait">
             <motion.p
               key={`priv-${lang}`}
               {...fadeProps}
-              className={`text-[12px] leading-snug text-black font-semibold ${
+              className={`text-[12px] leading-snug text-white/90 font-semibold ${
                 lang === "bn" ? "font-bn" : ""
               }`}
             >
@@ -334,7 +342,7 @@ function VehicleClaimedView({ tag }) {
           </AnimatePresence>
         </div>
 
-        <footer className="mt-8 text-center text-[11px] text-black/70 font-display font-bold">
+        <footer className="mt-8 text-center text-[11px] text-white/60 font-display font-bold tracking-widest uppercase">
           NECIRCLE · CONNECTING THE NORTHEAST · #{id}
         </footer>
       </div>

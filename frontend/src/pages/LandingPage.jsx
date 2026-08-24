@@ -14,6 +14,7 @@ import {
   Globe,
 } from "lucide-react";
 import BuyModal from "./BuyModal";
+import { BrandMark } from "../components/BrandMark";
 
 /* ---------------- Phone mockup (right-side hero art) ---------------- */
 function PhoneMockup() {
@@ -184,34 +185,27 @@ export default function LandingPage() {
 
       {/* Header */}
       <header className="relative z-10">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-          <Link to="/" data-testid="header-brand" className="inline-flex items-baseline gap-2">
-            <span className="font-display text-2xl font-extrabold tracking-tight text-white">
-              NE<span className="text-neon">Circle</span>
-            </span>
-            <span className="hidden sm:inline text-xs text-white/70">
-              Connecting the Northeast
-            </span>
-          </Link>
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between gap-3">
+          <BrandMark size={44} />
           <div className="flex items-center gap-2">
             <a
               href="#how"
               data-testid="nav-how"
-              className="hidden sm:inline text-sm text-white/80 hover:text-white px-3 py-2"
+              className="hidden sm:inline text-sm text-white/80 hover:text-white px-3 py-2 font-semibold"
             >
               How it works
             </a>
             <a
               href="#faq"
               data-testid="nav-faq"
-              className="hidden sm:inline text-sm text-white/80 hover:text-white px-3 py-2"
+              className="hidden sm:inline text-sm text-white/80 hover:text-white px-3 py-2 font-semibold"
             >
               FAQ
             </a>
             <Link
               to="/admin"
               data-testid="nav-admin"
-              className="text-sm font-bold text-white border-[2.5px] border-white/70 rounded-full px-3.5 py-1.5 hover:bg-white hover:text-royal transition-colors"
+              className="text-sm font-black text-white border-[2.5px] border-white/70 rounded-full px-3.5 py-1.5 hover:bg-white hover:text-royal transition-colors"
             >
               Operator
             </Link>
@@ -232,19 +226,29 @@ export default function LandingPage() {
           <div className="animate-fade-up">
             <div className="inline-flex items-center gap-2 chip bg-neon text-[#1a1a1a] border-[2.5px] border-[#1a1a1a] shadow-[3px_3px_0_0_#1a1a1a]">
               <Sparkles className="w-3.5 h-3.5" strokeWidth={2.8} />
-              Built in Tripura · Connecting the Northeast
+              Built in Tripura
             </div>
-            <h1 className="mt-5 font-display text-5xl sm:text-6xl lg:text-[68px] font-extrabold leading-[0.98] tracking-tight text-white">
-              A tiny sticker that lets anyone reach the owner —{" "}
-              <span className="text-neon">without an app.</span>
+            <h1 className="mt-5 font-display text-[44px] sm:text-[58px] lg:text-[68px] font-black leading-[1.02] tracking-[-0.02em] text-white">
+              A tiny sticker that lets
+              <br className="hidden sm:block" />{" "}
+              anyone reach the owner —{" "}
+              <span className="relative inline-block">
+                <span
+                  aria-hidden
+                  className="absolute inset-x-[-6px] bottom-1 sm:bottom-2 h-[0.42em] bg-neon -skew-y-1 rounded-[3px]"
+                />
+                <span className="relative text-[#1a1a1a] font-black">
+                  without an app.
+                </span>
+              </span>
             </h1>
-            <p className="mt-4 font-bn text-lg text-white/85">
+            <p className="mt-5 font-bn text-xl sm:text-2xl text-neon font-semibold leading-tight">
               স্ক্যান করুন — কোনো অ্যাপ ছাড়াই যোগাযোগ করুন।
             </p>
-            <p className="mt-6 text-lg text-white/80 leading-relaxed max-w-xl">
-              Stick a NECircle QR on your car windshield. Anyone who scans it gets a
-              Call and WhatsApp button — your real number stays private, in English,
-              Kokborok, or Bengali.
+            <p className="mt-6 text-lg text-white/85 leading-relaxed max-w-xl">
+              Stick a NECircle QR on your car windshield. Anyone who scans it gets
+              a Call and WhatsApp button — your real number stays private, shown in
+              English, Kokborok, or বাংলা.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <button
@@ -263,8 +267,8 @@ export default function LandingPage() {
                 See how it works
               </a>
             </div>
-            <p className="mt-4 text-xs text-white/60">
-              1 order = 3 stickers (English · Kokborok · Bengali). Ships anywhere in India.
+            <p className="mt-4 text-xs text-white/65 font-semibold">
+              1 order = 3 stickers · English · Kokborok · বাংলা · ships across India.
             </p>
           </div>
 
