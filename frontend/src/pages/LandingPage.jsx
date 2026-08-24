@@ -186,7 +186,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="relative z-10">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between gap-3">
-          <BrandMark size={44} />
+          <BrandMark size={56} />
           <div className="flex items-center gap-2">
             <a
               href="#how"
@@ -228,26 +228,21 @@ export default function LandingPage() {
               <Sparkles className="w-3.5 h-3.5" strokeWidth={2.8} />
               Built in Tripura
             </div>
-            <h1 className="mt-5 font-display text-[44px] sm:text-[58px] lg:text-[68px] font-black leading-[1.02] tracking-[-0.02em] text-white">
-              A tiny sticker that lets
-              <br className="hidden sm:block" />{" "}
-              anyone reach the owner —{" "}
-              <span className="relative inline-block">
-                <span
-                  aria-hidden
-                  className="absolute inset-x-[-6px] bottom-1 sm:bottom-2 h-[0.42em] bg-neon -skew-y-1 rounded-[3px]"
-                />
-                <span className="relative text-[#1a1a1a] font-black">
-                  without an app.
-                </span>
-              </span>
+            <h1 className="mt-6 font-display text-[46px] sm:text-[62px] lg:text-[76px] font-black leading-[0.98] tracking-[-0.03em] text-white">
+              A tiny sticker
+              <br />
+              that lets anyone
+              <br />
+              reach the owner —
+              <br />
+              <span className="text-neon">without an app.</span>
             </h1>
-            <p className="mt-5 font-bn text-xl sm:text-2xl text-neon font-semibold leading-tight">
-              স্ক্যান করুন — কোনো অ্যাপ ছাড়াই যোগাযোগ করুন।
+            <p className="mt-5 font-bn text-xl sm:text-2xl text-neon font-bold leading-tight">
+              স্ক্যান করুন — কোনো অ্যাপ ছাড়াই।
             </p>
-            <p className="mt-6 text-lg text-white/85 leading-relaxed max-w-xl">
+            <p className="mt-6 text-lg text-white font-medium leading-relaxed max-w-xl">
               Stick a NECircle QR on your car windshield. Anyone who scans it gets
-              a Call and WhatsApp button — your real number stays private, shown in
+              a Call and WhatsApp button — your real number stays private, in
               English, Kokborok, or বাংলা.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -267,7 +262,7 @@ export default function LandingPage() {
                 See how it works
               </a>
             </div>
-            <p className="mt-4 text-xs text-white/65 font-semibold">
+            <p className="mt-4 text-xs text-white/75 font-bold">
               1 order = 3 stickers · English · Kokborok · বাংলা · ships across India.
             </p>
           </div>
@@ -355,6 +350,65 @@ export default function LandingPage() {
               <p className="mt-2 text-[#5C564F] leading-relaxed">{s.body}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Sticker sample */}
+      <section className="relative z-10 max-w-6xl mx-auto px-5 sm:px-8 pb-20">
+        <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <div className="order-2 lg:order-1">
+            <div className="chip bg-neon text-[#1a1a1a] border-[2.5px] border-[#1a1a1a] inline-flex shadow-[3px_3px_0_0_#1a1a1a]">
+              <Package className="w-3.5 h-3.5" strokeWidth={2.8} />
+              What lands in your mailbox
+            </div>
+            <h2 className="mt-5 font-display text-4xl sm:text-5xl font-black text-white tracking-tight leading-[1.02]">
+              A weather-proof
+              <br />
+              <span className="text-neon">windshield sticker.</span>
+            </h2>
+            <p className="mt-5 text-lg text-white font-medium leading-relaxed">
+              Each order ships with three of these stickers — one printed with
+              English copy, one Kokborok, one বাংলা. Same QR on all three, so any
+              one you peel and stick works.
+            </p>
+            <ul className="mt-6 space-y-2 text-white/90 font-semibold">
+              {[
+                "UV-safe ink, holds up to sun & rain",
+                "3.5 × 2 inch — sits neatly on any windshield",
+                "5-digit ID printed under the QR",
+              ].map((li) => (
+                <li key={li} className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon" />
+                  {li}
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => setBuyOpen(true)}
+              data-testid="sticker-buy"
+              className="mt-7 btn-neon rounded-full px-6 py-3 font-display font-black inline-flex items-center gap-2"
+            >
+              Get 3 stickers for ₹99
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="order-1 lg:order-2 flex justify-center">
+            <div
+              className="relative w-full max-w-[520px] transition-transform hover:-rotate-1 hover:scale-[1.02]"
+              data-testid="sticker-sample"
+            >
+              <img
+                src="/sticker-sample.webp"
+                alt="NECircle windshield sticker sample"
+                className="w-full h-auto rounded-2xl border-[3px] border-black shadow-[10px_10px_0_0_#1a1a1a]"
+                draggable="false"
+              />
+              <div className="absolute -top-4 -left-4 bg-neon text-[#1a1a1a] border-[2.5px] border-black rounded-full px-3 py-1 font-display font-black text-xs shadow-[3px_3px_0_0_#1a1a1a] rotate-[-6deg]">
+                Real product
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
