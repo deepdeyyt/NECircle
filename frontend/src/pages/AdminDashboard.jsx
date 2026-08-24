@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Boxes,
   ShoppingBag,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, BACKEND_URL, formatApiError } from "../lib/api";
@@ -82,6 +83,7 @@ export default function AdminDashboard() {
   const [downloading, setDownloading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [inventoryOpen, setInventoryOpen] = useState(true);
 
   const load = useCallback(async () => {
     try {
@@ -308,6 +310,22 @@ export default function AdminDashboard() {
         <div className="mt-12">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setInventoryOpen((x) => !x)}
+                data-testid="inventory-collapse"
+                aria-expanded={inventoryOpen}
+                aria-controls="inventory-content"
+                title={inventoryOpen ? "Collapse inventory" : "Expand inventory"}
+                className="w-8 h-8 rounded-full border-[2.5px] border-white bg-royal-soft/40 text-white flex items-center justify-center hover:bg-neon hover:text-[#1a1a1a] transition-colors"
+              >
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${
+                    inventoryOpen ? "" : "-rotate-90"
+                  }`}
+                  strokeWidth={2.6}
+                />
+              </button>
               <Package className="w-4 h-4 text-neon" />
               <h2 className="font-display font-black text-xl text-white">
                 Inventory ({filtered.length})
@@ -338,27 +356,38 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {loading ? (
-            <div className="mt-8 flex justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-neon" />
+          <div
+            id="inventory-content"
+            className={`grid transition-all duration-200 ease-out ${
+              inventoryOpen
+                ? "grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0 pointer-events-none"
+            }`}
+          >
+            <div className="overflow-hidden">
+              {loading ? (
+                <div className="mt-8 flex justify-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-neon" />
+                </div>
+              ) : filtered.length === 0 ? (
+                <div
+                  className="mt-8 rounded-2xl border-[2.5px] border-dashed border-white/40 p-10 text-center text-white/70"
+                  data-testid="empty-inventory"
+                >
+                  No tags yet. Generate a batch to start printing.
+                </div>
+              ) : (
+                <div
+                  className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
+                  data-testid="tag-grid"
+                >
+                  {filtered.map((t) => (
+                    <TagCard key={t.id} tag={t} />
+                  ))}
+                </div>
+              )}
             </div>
-          ) : filtered.length === 0 ? (
-            <div
-              className="mt-8 rounded-2xl border-[2.5px] border-dashed border-white/40 p-10 text-center text-white/70"
-              data-testid="empty-inventory"
-            >
-              No tags yet. Generate a batch to start printing.
-            </div>
-          ) : (
-            <div
-              className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
-              data-testid="tag-grid"
-            >
-              {filtered.map((t) => (
-                <TagCard key={t.id} tag={t} />
-              ))}
-            </div>
-          )}
+          </div>
         </div>
 
         <OrdersPanel onChanged={load} />
