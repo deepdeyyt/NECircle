@@ -337,11 +337,15 @@ Certbot registers a systemd timer for auto-renewal — check with `sudo systemct
 
 The keys already in `.env` are LIVE. On necircle.in:
 
-- Log in to https://dashboard.razorpay.com → **Settings → Webhooks**.
-- Add webhook URL: `https://necircle.in/api/orders/webhook`  (we don't consume it yet — see §14 backlog — but registering it now avoids downtime later).
+- Log in to https://dashboard.razorpay.com → **Settings → Webhooks** → *+ Add New Webhook*.
+- URL: `https://necircle.in/api/orders/webhook`
+- Active events: `payment.captured` and `order.paid` (both, for redundancy).
+- Razorpay generates a **webhook secret** once — copy it into `backend/.env` as `RAZORPAY_WEBHOOK_SECRET=...`, then `sudo systemctl restart necircle-backend`.
 - Whitelisted domains: add `necircle.in`.
 - Confirm KYC + settlement bank account are approved (otherwise capture will fail even with valid signatures).
-- Do a **₹1 test order** by temporarily setting `ORDER_PRICE_PAISE=100`, buying it yourself, refunding from the dashboard, then reverting to `9900`.
+- Do a **₹1 test order** by temporarily setting `ORDER_PRICE_PAISE=100`, buying it yourself, refunding from the dashboard, then reverting to `9900`. After a successful payment you should see in Razorpay's webhook log: `200 OK` from `/api/orders/webhook` and the order marked `status=paid` with `reconciled_via=webhook` in Mongo.
+
+Why a webhook AND `/api/orders/verify`? The client-side verify only runs if the buyer waits on the page. The server-side webhook reconciles the order even if the browser tab is closed. Both paths hit the same idempotent code — allocation happens exactly once.
 
 ---
 
@@ -496,11 +500,23 @@ Then commit a **redacted** sample env for other devs: `backend/.env.example` (co
 
 ## 13. Redeploy workflow after a code change
 
-```bash
-# local machine
-git push origin main
+Once §3 is done and `deploy.sh` is on the VPS, every future deploy is one command:
 
+```bash
 # on the VPS
+cd ~/apps/necircle
+./deploy.sh                   # pulls main, rebuilds frontend, restarts backend
+./deploy.sh --backend         # only backend
+./deploy.sh --frontend        # only frontend
+./deploy.sh --branch staging  # deploy a different branch
+./deploy.sh --no-pull         # deploy current working tree without git pull
+```
+
+The script fails loudly (exit code ≠ 0) if the backend fails to come back up, so it's safe to wire into a CI hook or a cron.
+
+Manual equivalent (if you skip the script):
+
+```bash
 cd ~/apps/necircle
 git pull --ff-only
 
@@ -516,15 +532,12 @@ yarn build
 # no restart needed — Nginx serves the fresh build/ directly
 ```
 
-Automate with a `deploy.sh` at repo root if you push often.
-
 ---
 
 ## 14. Known operational backlog
 
 - CORS is now scoped, but there is still **no brute-force lockout on `/api/auth/login`** — add rate-limiting at Nginx (`limit_req`) or in the app for extra safety.
 - `_public_base_url()` derives the QR URL from request headers as a fallback. On the VPS, **always** set `PUBLIC_BASE_URL=https://necircle.in` so QR codes never accidentally embed the preview URL.
-- Razorpay webhook (`/api/orders/webhook`) is **not implemented** yet — for now `/api/orders/verify` is called from the browser after checkout. Add a webhook handler + idempotency key before you rely on it for reconciliation.
 - Admin uses JWT in localStorage + an httpOnly cookie. Pick one before opening the operator dashboard to public networks.
 
 ---

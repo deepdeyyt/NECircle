@@ -42,6 +42,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Admin@123")
 
 RAZORPAY_KEY_ID = os.environ["RAZORPAY_KEY_ID"]
 RAZORPAY_KEY_SECRET = os.environ["RAZORPAY_KEY_SECRET"]
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
 ORDER_PRICE_PAISE = int(os.environ.get("ORDER_PRICE_PAISE", "9900"))
 TAGS_PER_ORDER = 1  # one QR/id per ₹99 order — printed in 3 languages
 
@@ -526,7 +527,7 @@ async def verify_payment(body: VerifyPaymentIn):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    if order.get("status") == "paid":
+    if order.get("status") == "paid" or order.get("status") == "shipped":
         return {
             "ok": True,
             "order_id": order["id"],
@@ -545,10 +546,114 @@ async def verify_payment(body: VerifyPaymentIn):
                 "razorpay_signature": body.razorpay_signature,
                 "tag_ids": tag_ids,
                 "paid_at": datetime.now(timezone.utc).isoformat(),
+                "reconciled_via": "verify",
             }
         },
     )
     return {"ok": True, "order_id": order["id"], "tag_ids": tag_ids}
+
+
+# ---------- Razorpay webhook (server-to-server reconciliation) ----------
+def _verify_webhook_signature(raw_body: bytes, signature: str) -> bool:
+    """Razorpay signs webhooks with HMAC-SHA256(secret, raw_body)."""
+    if not RAZORPAY_WEBHOOK_SECRET or not signature:
+        return False
+    expected = hmac.new(
+        RAZORPAY_WEBHOOK_SECRET.encode(), raw_body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+
+
+async def _reconcile_paid_order(razorpay_order_id: str, razorpay_payment_id: str) -> dict:
+    """Idempotent: mark order paid and allocate tags exactly once."""
+    order = await db.orders.find_one({"razorpay_order_id": razorpay_order_id})
+    if not order:
+        return {"skipped": "order_not_found", "razorpay_order_id": razorpay_order_id}
+
+    if order.get("status") in ("paid", "shipped"):
+        return {"ok": True, "already": True, "order_id": order["id"]}
+
+    total_tags = TAGS_PER_ORDER * (order.get("quantity") or 1)
+    tag_ids = await _allocate_tags_for_order(total_tags)
+
+    await db.orders.update_one(
+        {"id": order["id"], "status": {"$ne": "paid"}},
+        {
+            "$set": {
+                "status": "paid",
+                "razorpay_payment_id": razorpay_payment_id,
+                "tag_ids": tag_ids,
+                "paid_at": datetime.now(timezone.utc).isoformat(),
+                "reconciled_via": "webhook",
+            }
+        },
+    )
+    return {"ok": True, "already": False, "order_id": order["id"], "tag_ids": tag_ids}
+
+
+@api.post("/orders/webhook")
+async def razorpay_webhook(request: Request):
+    """
+    Razorpay → server webhook. Handles `payment.captured` and `order.paid`
+    events. Verifies HMAC-SHA256 signature with RAZORPAY_WEBHOOK_SECRET,
+    then idempotently marks the matching order as paid + allocates tags.
+    Always returns 200 quickly (Razorpay retries 4xx/5xx for up to 24h).
+    """
+    raw = await request.body()
+    signature = request.headers.get("x-razorpay-signature", "")
+
+    if not RAZORPAY_WEBHOOK_SECRET:
+        logger.error("Razorpay webhook received but RAZORPAY_WEBHOOK_SECRET is unset")
+        raise HTTPException(status_code=503, detail="Webhook not configured")
+
+    if not _verify_webhook_signature(raw, signature):
+        logger.warning("Razorpay webhook signature mismatch")
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
+
+    try:
+        import json as _json
+
+        event = _json.loads(raw.decode())
+    except Exception as e:
+        logger.error("Razorpay webhook JSON parse failed: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid JSON") from e
+
+    event_type = event.get("event") or ""
+    payload = event.get("payload") or {}
+
+    # Extract order + payment ids from every event shape we care about.
+    rz_order_id = None
+    rz_payment_id = None
+
+    pay_entity = (payload.get("payment") or {}).get("entity") or {}
+    ord_entity = (payload.get("order") or {}).get("entity") or {}
+
+    if pay_entity:
+        rz_order_id = pay_entity.get("order_id")
+        rz_payment_id = pay_entity.get("id")
+    if not rz_order_id and ord_entity:
+        rz_order_id = ord_entity.get("id")
+
+    if event_type not in ("payment.captured", "payment.authorized", "order.paid"):
+        logger.info("Razorpay webhook ignored event=%s", event_type)
+        return {"ok": True, "ignored": event_type}
+
+    if not rz_order_id:
+        logger.warning("Razorpay webhook missing order id, event=%s", event_type)
+        return {"ok": True, "skipped": "no_order_id"}
+
+    # Only mark paid on captured / order.paid — authorized alone doesn't guarantee funds.
+    if event_type == "payment.authorized":
+        return {"ok": True, "noted": "authorized"}
+
+    result = await _reconcile_paid_order(rz_order_id, rz_payment_id or "")
+    logger.info(
+        "Razorpay webhook event=%s order=%s result=%s",
+        event_type,
+        rz_order_id,
+        result,
+    )
+    return {"ok": True, "event": event_type, **result}
 
 
 @api.get("/admin/orders")
