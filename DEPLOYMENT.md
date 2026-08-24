@@ -95,12 +95,16 @@ sudo apt -y install libjpeg-dev zlib1g-dev  # already covered by build-essential
 
 ## 3. Fetch the code
 
+Everything lives inside a single folder called **`necircle`** in the deploy user's home directory (`/home/necircle/necircle`). All paths in the rest of this guide assume that.
+
 ```bash
-# as necircle user
-mkdir -p ~/apps && cd ~/apps
+# as the necircle user
+cd ~
 git clone https://github.com/<your-org>/necircle.git
 cd necircle
 ```
+
+If you already extracted a zip / rsync'd the files, just make sure the code lives at `/home/necircle/necircle/` with `backend/`, `frontend/`, `deploy.sh`, `DEPLOYMENT.md` at that root.
 
 If you don't have a GitHub repo yet, follow §12 first, then come back.
 
@@ -109,7 +113,7 @@ If you don't have a GitHub repo yet, follow §12 first, then come back.
 ## 4. Backend setup
 
 ```bash
-cd ~/apps/necircle/backend
+cd ~/necircle/backend
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
@@ -118,7 +122,7 @@ pip install -r requirements.txt
 
 ### 4.1 Create `backend/.env`
 
-Copy the sample below into `~/apps/necircle/backend/.env` — **replace the JWT_SECRET** with a fresh 64-char value (`openssl rand -hex 32`) and confirm all other values.
+Copy the sample below into `~/necircle/backend/.env` — **replace the JWT_SECRET** with a fresh 64-char value (`openssl rand -hex 32`) and confirm all other values.
 
 ```dotenv
 MONGO_URL="mongodb://127.0.0.1:27017"
@@ -146,7 +150,7 @@ Important:
 ### 4.2 Smoke-test locally on the VPS
 
 ```bash
-cd ~/apps/necircle/backend
+cd ~/necircle/backend
 source .venv/bin/activate
 uvicorn server:app --host 127.0.0.1 --port 8001
 # in another shell:
@@ -169,9 +173,9 @@ Requires=mongod.service
 Type=simple
 User=necircle
 Group=necircle
-WorkingDirectory=/home/necircle/apps/necircle/backend
-EnvironmentFile=/home/necircle/apps/necircle/backend/.env
-ExecStart=/home/necircle/apps/necircle/backend/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8001 --workers 2
+WorkingDirectory=/home/necircle/necircle/backend
+EnvironmentFile=/home/necircle/necircle/backend/.env
+ExecStart=/home/necircle/necircle/backend/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8001 --workers 2
 Restart=on-failure
 RestartSec=3
 # Hardening
@@ -195,7 +199,7 @@ Logs: `sudo journalctl -u necircle-backend -f`.
 ## 5. Frontend build
 
 ```bash
-cd ~/apps/necircle/frontend
+cd ~/necircle/frontend
 ```
 
 ### 5.1 Create `frontend/.env` (build-time)
@@ -216,7 +220,7 @@ yarn install --frozen-lockfile
 yarn build
 ```
 
-The compiled site lands in `~/apps/necircle/frontend/build/`. Nginx will serve that directory directly — no Node process needed in production.
+The compiled site lands in `~/necircle/frontend/build/`. Nginx will serve that directory directly — no Node process needed in production.
 
 ---
 
@@ -252,7 +256,7 @@ server {
     client_max_body_size 25m;
 
     # Serve the built React app
-    root /home/necircle/apps/necircle/frontend/build;
+    root /home/necircle/necircle/frontend/build;
     index index.html;
 
     # Static assets: long cache
@@ -504,7 +508,7 @@ Once §3 is done and `deploy.sh` is on the VPS, every future deploy is one comma
 
 ```bash
 # on the VPS
-cd ~/apps/necircle
+cd ~/necircle
 ./deploy.sh                   # pulls main, rebuilds frontend, restarts backend
 ./deploy.sh --backend         # only backend
 ./deploy.sh --frontend        # only frontend
@@ -517,7 +521,7 @@ The script fails loudly (exit code ≠ 0) if the backend fails to come back up, 
 Manual equivalent (if you skip the script):
 
 ```bash
-cd ~/apps/necircle
+cd ~/necircle
 git pull --ff-only
 
 # backend deps changed?
@@ -547,7 +551,7 @@ yarn build
 If a deploy breaks the site:
 
 ```bash
-cd ~/apps/necircle
+cd ~/necircle
 git log --oneline -n 10                 # find the last-known-good SHA
 git checkout <SHA>
 # rebuild frontend if needed, restart backend
@@ -576,8 +580,8 @@ cd frontend && yarn build
 | Backend systemd service       | `necircle-backend`                |
 | Backend port (internal only)  | `127.0.0.1:8001`                  |
 | Nginx site config             | `/etc/nginx/sites-available/necircle.in` |
-| Backend env                   | `~/apps/necircle/backend/.env`    |
-| Frontend env (build-time)     | `~/apps/necircle/frontend/.env`   |
+| Backend env                   | `~/necircle/backend/.env`    |
+| Frontend env (build-time)     | `~/necircle/frontend/.env`   |
 | MongoDB data dir              | `/var/lib/mongodb/`               |
 | Backups                       | `/var/backups/necircle/`          |
 | Let's Encrypt certs           | `/etc/letsencrypt/live/necircle.in/` |
